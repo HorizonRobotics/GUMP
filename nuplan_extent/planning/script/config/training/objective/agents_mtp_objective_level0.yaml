@@ -1,0 +1,6 @@
+agents_mtp_objective_level0:
+  _target_: nuplan_extent.planning.training.modeling.objectives.agents_mtp_objective.AgentsMTPObjective
+  _convert_: 'all'
+
+  level: 0
+  weight: 0.25

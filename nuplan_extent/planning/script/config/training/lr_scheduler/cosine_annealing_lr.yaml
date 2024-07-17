@@ -1,0 +1,6 @@
+_target_: torch.optim.lr_scheduler.CosineAnnealingLR
+_convert_: 'all'
+
+# T_max: 43900 # total number of steps
+T_max: ??? # total number of epochs
+eta_min: 4e-7 # 4e-4 * 1e-3, minimum learning rate

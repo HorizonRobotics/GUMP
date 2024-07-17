@@ -1,0 +1,5 @@
+
+log_visual_gated_param_callback:
+  _target_: nuplan_extent.planning.training.callbacks.log_visual_gated_param_callback.LogVisualGatedParamCallback
+  _convert_: 'all'
+

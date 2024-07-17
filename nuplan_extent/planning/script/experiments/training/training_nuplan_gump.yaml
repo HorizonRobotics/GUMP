@@ -1,0 +1,33 @@
+# @package _global_
+job_name: training_world_model
+py_func: train
+objective_aggregate_mode: sum
+
+defaults:
+  - override /data_augmentation:
+      - convert_to_float
+      - tokenizer_preprocessor
+  - override /val_data_augmentation:
+      - convert_to_float
+      - tokenizer_preprocessor
+      
+  - override /objective:
+      - masked_cross_entrophy_objective
+      - agents_ade_objective_level0
+      - agents_ade_objective_level1
+      - agents_ade_objective_level2
+      - agents_ade_objective_level3
+      - agents_mtp_objective_level0
+      - agents_mtp_objective_level1
+      - agents_mtp_objective_level2
+      - agents_mtp_objective_level3
+  - override /splitter: nuplan
+  - override /model: policy_world_model_nar_gptm
+  - override /scenario_filter: all_scenarios
+  - override /training_metric:
+      - dummy_metric
+  - override /aggregated_metric:
+      - dummy_aggregated_metrics
+  - override /common_cfg: gump
+
+  

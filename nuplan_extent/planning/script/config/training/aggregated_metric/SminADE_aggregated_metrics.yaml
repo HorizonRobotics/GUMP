@@ -1,0 +1,7 @@
+SminADE_aggregated_metrics:
+  _target_: nuplan_extent.planning.training.modeling.aggregated_metrics.SminADE_aggregated_metrics.SminADEAggregatedMetric
+  _convert_: 'all'
+
+  is_avg_corner_dist: false
+  is_ego: false
+# Path: nuplan_extent/planning/script/config/training/aggregated_metric/SminFDE_aggregated_metrics.yam

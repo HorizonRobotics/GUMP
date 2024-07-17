@@ -1,0 +1,6 @@
+autoencoder_objective:
+  _target_: nuplan_extent.planning.training.modeling.objectives.autoencoder_objective.AutoEncoderObjective
+  _convert_: 'all'
+
+  weight: 5.0                  # weight contribution to the overall loss
+  input_channel_indexes: [2,3,4,6,7]

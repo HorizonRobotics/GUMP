@@ -1,0 +1,5 @@
+collided_aggregated_metrics_ego:
+  _target_: nuplan_extent.planning.training.modeling.aggregated_metrics.collided_aggregated_metrics.CollidedAggregatedMetric
+  _convert_: 'all'
+
+  is_ego: true

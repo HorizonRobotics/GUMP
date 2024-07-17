@@ -1,0 +1,13 @@
+_target_: nuplan_extent.planning.scenario_builder.wod_db.wod_scenario_builder.WodScenarioBuilder
+_convert_: 'all'
+
+data_root: '/mnt/nas20/zhening.yang/wod/scenario_pkl_v1_2/'
+training_token_list_path: '/mnt/nas20/zhening.yang/wod/scenario_pkl_v1_2//sdc_raw_merge_tokens/training_token_list.txt'
+validation_token_list_path: '/mnt/nas20/siqi01.chai/wod_splits/validation_token_list_256.txt'
+# validation_token_list_path: '/mnt/nas20/siqi01.chai/wod_splits/left_testing_token_list.txt'
+# validation_token_list_path: '/mnt/nas20/siqi01.chai/wod_splits/validation_token_list_small.txt'
+# validation_token_list_path: '/mnt/nas20/zhening.yang/wod/scenario_pkl_v1_2/raw_tokens/validation_token_list_remove_empty.txt'
+# validation_token_list_path: '/mnt/nas20/siqi01.chai/wod_splits/sub50_validation_token_list.txt'
+db_files: null
+subsample_ratio: 1
+start_index: 0

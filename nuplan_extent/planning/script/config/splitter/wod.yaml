@@ -1,0 +1,10 @@
+_target_: nuplan_extent.planning.training.data_loader.wod_splitter.WodSplitter
+_convert_: 'all'
+
+training_token_list_path: '/mnt/nas20/zhening.yang/wod/scenario_pkl_v1_2/sdc_raw_merge_tokens/training_token_list.txt'
+# validation_token_list_path: '/mnt/nas20/zhening.yang/wod/scenario_pkl_v1_2/sdc_tokens/testing_token_list.txt'
+# training_token_list_path: '/mnt/nas20/zhening.yang/wod/scenario_pkl_v1_2/validation_split/training_token_list.txt'
+# validation_token_list_path: '/mnt/nas20/zhening.yang/wod/scenario_pkl_v1_2/raw_tokens/validation_token_list_remove_empty.txt'
+subsample_ratio: 1
+start_index: 0
+validation_token_list_path: '/mnt/nas20/siqi01.chai/wod_splits/validation_token_list_256.txt'

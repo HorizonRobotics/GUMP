@@ -1,0 +1,3 @@
+dummy_aggregated_metrics:
+  _target_: nuplan_extent.planning.training.modeling.aggregated_metrics.dummy_aggregated_metrics.DummyAggregatedMetric
+  _convert_: 'all'

@@ -1,0 +1,4 @@
+copy_target_to_feature:
+  _target_: nuplan_extent.planning.training.data_augmentation.copy_target_to_feature.CopyTargetToFeatureAugmentor
+  _convert_: 'all'
+  trajectory_steps: ${common_cfg.output_cfg.trajectory_steps}

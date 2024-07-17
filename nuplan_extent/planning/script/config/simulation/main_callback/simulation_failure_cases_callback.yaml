@@ -1,0 +1,33 @@
+simulation_failure_cases_callback:
+  _target_: nuplan_extent.planning.simulation.main_callback.simulation_failure_cases_callback.SimilationFailureCasesCallback
+  _convert_: 'all'
+
+  simulation_directory: ${output_dir}
+  metric_file_dir: metrics           # Path of a folder in which the metrics are saved
+  videos_output_dir: video                 # Path of a folder in which the videos are saved
+
+  # no_ego_at_fault_collisions
+  # drivable_area_compliance
+  # ego_progress_along_expert_route
+  # driving_direction_compliance
+  # time_to_collision_within_bound
+  # ego_is_comfortable
+  selected_metrics:                                       # A dict of metrics-threshold to use to find bad cases
+    no_ego_at_fault_collisions: 0.5
+    drivable_area_compliance: 0.5
+    ego_progress_along_expert_route: 0.5
+  num_bad_cases_per_type: 2     # num of bad cases saved for each scenario type
+
+  scenarios:
+    7835a781f6bd5688
+    388a87f6eb315c1a
+    0612d791f0825acd
+
+  map_root: ${scenario_builder.map_root}
+  map_version: nuplan-maps-v1.0
+
+  driver_path: /mnt/nas37/kun.li/packages/chromedriver    # Path of installed chromedriver, need to support the same Chrome version. https://chromedriver.chromium.org/downloads
+  chrome_path: /opt/google/chrome/google-chrome # Path of installed google-chrome. Default
+
+  figure_size: [1000, 1000]
+  radius: 150

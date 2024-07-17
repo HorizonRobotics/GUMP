@@ -1,0 +1,3 @@
+dummy_metric:
+  _target_: nuplan_extent.planning.training.modeling.metrics.dummy_metric.DummyMetric
+  _convert_: 'all'

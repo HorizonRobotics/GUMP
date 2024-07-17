@@ -1,0 +1,4 @@
+perplexity_metric:
+  _target_: nuplan_extent.planning.training.modeling.metrics.perplexity_metric.CrossEntrophyNARMetric
+  _convert_: 'all'
+

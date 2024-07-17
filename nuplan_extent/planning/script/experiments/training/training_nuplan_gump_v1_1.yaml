@@ -1,0 +1,34 @@
+# @package _global_
+job_name: training_world_model
+py_func: train
+objective_aggregate_mode: sum
+
+defaults:
+  - override /data_augmentation:
+      - convert_to_float
+  - override /val_data_augmentation:
+      - convert_to_float
+      
+  - override /objective:
+      - masked_cross_entrophy_objective_v1_1
+  - override /splitter: nuplan
+  - override /model: gump_nuplan_gptbase_v1_1
+  - override /scenario_filter: all_scenarios
+  - override /training_metric:
+      - dummy_metric
+  - override /aggregated_metric:
+      - dummy_aggregated_metrics
+    #   - SminADE_aggregated_metrics
+    #   - SminADE_aggregated_metrics_ego
+    #   - SminADE_aggregated_metrics_cdist
+    #   - SminADE_aggregated_metrics_ego_cdist
+    #   - collided_aggregated_metrics
+    #   - collided_aggregated_metrics_ego
+  - override /common_cfg: gump
+  - override /callbacks: 
+    - learning_rate_monitor_callback
+    - model_checkpoint_callback
+    - time_logging_callback
+    - visualization_gump_callback
+    - log_visual_gated_param_callback
+  

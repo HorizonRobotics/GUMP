@@ -1,0 +1,47 @@
+#! /usr/bin/env bash
+SAVE_DIR=/mnt/nas25/yihan01.hu/workspace/test/
+EXPERIMENT=test_nuplan
+CACHE_DIR=/mnt/nas25/yihan01.hu/tmp/cache_dir/
+CACHE_META_PATH=/mnt/nas25/yihan01.hu/tmp/cache_dir/metadata/cache_dir_metadata_node_0.csv
+export CUDA_VISIBLE_DEVICES=7
+export PYTHONPATH=$PWD:$PYTHONPATH
+export NUPLAN_DATA_ROOT="/mnt/nas20/nuplanv1.1/data/cache/trainval"
+export NUPLAN_MAPS_ROOT="/mnt/nas20/nuplanv1.1/maps"
+export PYTHONPATH=$PWD:$PYTHONPATH
+export PYTHONPATH=$NUPLAN_DEVKIT_PATH:$PYTHONPATH
+
+python -W ignore $PWD/nuplan_extent/planning/script/run_training.py \
+    group=$SAVE_DIR \
+    cache.cache_path=$CACHE_DIR \
+    cache.cache_metadata_path=$CACHE_META_PATH \
+    cache.force_feature_computation=false \
+    cache.use_cache_without_dataset=true \
+    cache.versatile_caching=false \
+    experiment_name=$EXPERIMENT \
+    py_func=train \
+    seed=0 \
+    +training=training_nuplan_gump \
+    scenario_builder=nuplan \
+    scenario_builder.data_root=$NUPLAN_DATA_ROOT \
+    scenario_builder.scenario_mapping.subsample_ratio_override=1 \
+    lightning.trainer.params.accelerator=gpu \
+    lightning.trainer.params.max_epochs=15 \
+    lightning.trainer.params.max_time=14:32:00:00\
+    lightning.trainer.params.precision=bf16 \
+    lightning.trainer.params.gradient_clip_val=5.0 \
+    +lightning.trainer.params.val_check_interval=1.0 \
+    lightning.trainer.params.strategy=ddp_find_unused_parameters_true \
+    lightning.trainer.params.accumulate_grad_batches=2 \
+    data_loader.params.batch_size=1 \
+    data_loader.params.num_workers=8 \
+    worker=single_machine_thread_pool \
+    model=gump_nuplan_gptbase \
+    optimizer=adamw \
+    optimizer.lr=1e-4 \
+    optimizer.weight_decay=1e-3 \
+    lr_scheduler=multistep_lr \
+    lr_scheduler.milestones=[8,13] \
+    lr_scheduler.gamma=0.2 \
+    lightning.trainer.checkpoint.resume_training=false \
+    +checkpoint.ckpt_path=null \
+    scenario_filter=all_scenarios 

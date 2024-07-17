@@ -1,0 +1,5 @@
+temporal_subsample:
+  _target_: nuplan_extent.planning.training.data_augmentation.temporal_subsample.TemporalSubsampleAugmentor
+  _convert_: 'all'
+
+  subsample_interval: 2

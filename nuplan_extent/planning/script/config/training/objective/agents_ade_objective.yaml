@@ -1,0 +1,5 @@
+agents_ade_objective:
+  _target_: nuplan_extent.planning.training.modeling.objectives.agents_ade_objective.AgentsADEObjective
+  _convert_: 'all'
+
+  level: 0

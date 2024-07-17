@@ -1,0 +1,52 @@
+# @package _global_
+common_cfg:
+  input_cfg:
+    # 0: ego_raster
+    # 1: agents_raster
+    # 2: roadmap_raster
+    # 3: baseline_paths_raster
+    # 4: route_raster
+    # 5: ego_speed_raster
+    # 6: drivable_area_raster
+    # 7: speed_limit_raster
+    # 8: static_objects_raster
+    # 9-14: traffic_light_raster
+      # if we set variable draw_ego_route_separately_tl true, we will have 6 channels for traffic light(8-13)
+      # 9-11 is for other lanes' traffic light; 12-14 is for ego-lane's traffic light
+      # if draw_ego_route_separately_tl is false: our traffic light will have 3 channels instead (8-10)
+      # 9-11 for traffic light of ego-other converged.
+      # the three channels are for red, green, blue, where blue stands for unknown and red+green=yellow
+    # 15: instance_mask_raster at the current frame
+    # 16: gradient_lane_raster: the lane raster so that the color gradient indicates the direction.
+    # 17: polor_direction_lane_raster: the color indicates the rad value of the yaw of each position of the lane
+    # 18: mission_goal_raster_each: drawing the mission goal for each raster, if not in the range, draw on the boundary
+    # 19: mission_goal_raster_only_ending: mission goal raster, if not in the range, do not draw
+            
+    # input_channel_indexes: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+    input_channel_indexes: [0, 1, 2, 3, 4, 5, 6]
+    raster_map_bev_range: [-104., -104., 104., 104.] # bev range in meters
+    meshgrid: [0.5, 0.5]
+    target_width_wm: 416
+    target_height_wm: 416
+    target_width: 416
+    target_height: 416
+    target_pixel_size: 0.5
+    max_speed_normalizer: 24.0 # [m/s] use max speed to normalize current speed
+
+    # select your dataset
+    dataset: 'nuplan'
+    num_past_steps: 12
+    past_time_horizon: 6.0 # training
+
+    # dataset: 'nuplan'
+    # num_past_steps: 2
+    # past_time_horizon: 1.0 # simulation
+
+    # dataset: 'waymo'
+    # num_past_steps: 2
+    # past_time_horizon: 1.0
+  output_cfg:
+    trajectory_steps: 8 # the number of steps to be sampled from trajectory output
+    time_horizon: 4.0
+
+  downstream_task: 'sim_agents'

@@ -1,0 +1,192 @@
+{
+    "no_offset":
+    {
+        "iter":{
+            "0":{
+                "ego_raster":{
+                    "sum": 286
+                },
+                "agents_raster":{
+                    "sum": 14885
+                },
+                "roadmap_raster":{
+                    "sum": 3079
+                },
+                "baseline_paths_raster":{
+                    "sum": 1675
+                },
+                "route_raster":{
+                    "sum": 104
+                },
+                "ego_speed_raster":{
+                    "sum": 45579
+                },
+                "drivable_area_raster":{
+                    "sum": 29003
+                },
+                "speed_limit_raster":{
+                    "sum": 0
+                },
+                "merge_raster":{
+                    "mean": 241,
+                    "std": 44
+                }
+            },
+            "10":{
+                "ego_raster":{
+                    "sum": 286
+                },
+                "agents_raster":{
+                    "sum": 13752
+                },
+                "roadmap_raster":{
+                    "sum": 3085
+                },
+                "baseline_paths_raster":{
+                    "sum": 1609
+                },
+                "route_raster":{
+                    "sum": 104
+                },
+                "ego_speed_raster":{
+                    "sum": 43188
+                },
+                "drivable_area_raster":{
+                    "sum": 28159
+                },
+                "speed_limit_raster":{
+                    "sum": 0
+                },
+                "merge_raster":{
+                    "mean": 241,
+                    "std": 44
+                }
+            },
+            "20":{
+                "ego_raster":{
+                    "sum": 286
+                },
+                "agents_raster":{
+                    "sum": 11621
+                },
+                "roadmap_raster":{
+                    "sum": 3098
+                },
+                "baseline_paths_raster":{
+                    "sum": 1548
+                },
+                "route_raster":{
+                    "sum": 93
+                },
+                "ego_speed_raster":{
+                    "sum": 40176
+                },
+                "drivable_area_raster":{
+                    "sum": 27866
+                },
+                "speed_limit_raster":{
+                    "sum": 0
+                },
+                "merge_raster":{
+                    "mean": 242,
+                    "std": 41
+                }
+            }
+        }
+    },
+    "offset":
+    {
+        "iter":{
+            "0":{
+                "ego_raster":{
+                    "sum": 286
+                },
+                "agents_raster":{
+                    "sum": 16995
+                },
+                "roadmap_raster":{
+                    "sum": 3085
+                },
+                "baseline_paths_raster":{
+                    "sum": 1575
+                },
+                "route_raster":{
+                    "sum": 121
+                },
+                "ego_speed_raster":{
+                    "sum": 45579
+                },
+                "drivable_area_raster":{
+                    "sum": 27793
+                },
+                "speed_limit_raster":{
+                    "sum": 0
+                },
+                "merge_raster":{
+                    "mean": 241,
+                    "std": 44
+                }
+            },
+            "10":{
+                "ego_raster":{
+                    "sum": 286
+                },
+                "agents_raster":{
+                    "sum": 16347
+                },
+                "roadmap_raster":{
+                    "sum": 3081
+                },
+                "baseline_paths_raster":{
+                    "sum": 1548
+                },
+                "route_raster":{
+                    "sum": 121
+                },
+                "ego_speed_raster":{
+                    "sum": 43188
+                },
+                "drivable_area_raster":{
+                    "sum": 27805
+                },
+                "speed_limit_raster":{
+                    "sum": 0
+                },
+                "merge_raster":{
+                    "mean": 241,
+                    "std": 44
+                }
+            },
+            "20":{
+                "ego_raster":{
+                    "sum": 286
+                },
+                "agents_raster":{
+                    "sum": 14638
+                },
+                "roadmap_raster":{
+                    "sum": 3081
+                },
+                "baseline_paths_raster":{
+                    "sum": 1547
+                },
+                "route_raster":{
+                    "sum": 121
+                },
+                "ego_speed_raster":{
+                    "sum": 40176
+                },
+                "drivable_area_raster":{
+                    "sum": 27879
+                },
+                "speed_limit_raster":{
+                    "sum": 0
+                },
+                "merge_raster":{
+                    "mean": 242,
+                    "std": 43
+                }
+            }
+        }
+    }
+}

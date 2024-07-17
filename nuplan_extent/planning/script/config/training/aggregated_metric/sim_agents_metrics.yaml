@@ -1,0 +1,5 @@
+sim_agents_metrics:
+  _target_: nuplan_extent.planning.training.modeling.aggregated_metrics.sim_agents_metrics.SimAgentsMetric
+  _convert_: 'all'
+
+  basepath: '/mnt/nas26/yihan01.hu/test_wod/tmp_pkl'

@@ -1,0 +1,52 @@
+{
+    "objects": [
+        {
+        "id": 473,
+        "pose": [
+            -980.8162381130426,
+            -3478.4099584563082,
+            0.0
+        ]
+        },
+        {
+        "id": 145,
+        "speed_limt": 25.0,
+        "length": 95.32182223425349
+        }
+    ],
+    "map": {
+        "split": "training",
+        "scenario_id": "bc4e214d063187ae"
+    },
+    "markers": [
+        {
+            "id": 36,
+            "name": "",
+            "pose": [
+                -989.3565932004187,
+                -3452.2609939834615,
+                0.0
+            ],
+            "shape": "circle"
+        }
+    ],
+    "meta": {
+        "version": "3.0.0"
+    },
+
+    "path_info": [],
+    "world": {
+        "bicycles": [],
+        "pedestrians": [],
+        "vehicles": []
+    },
+    "xtr": {
+        "expected_num_baseline_paths": 200,
+        "expected_num_stop_signs": 1,
+        "expected_num_crosswalks": 4,
+        "expected_num_speed_bumps": 15,
+        "expected_num_lanes": 28,
+        "expected_num_boundaries": 52,
+        "expected_num_stop_lines": 3
+    }
+}

@@ -1,0 +1,22 @@
+# Ignore all __pycache__ directories recursively
+**/__pycache__/
+
+# Ignore all files and directories within third_party/nuplan-devkit/
+third_party/nuplan-devkit/**
+
+# Ignore all files and directories within third_party/alf/
+third_party/alf/**
+
+# Other common Python ignore patterns
+*.py[cod]
+*.swp
+*.bak
+*.log
+*.tmp
+*.out
+
+# Virtual environment directories
+venv/
+env/
+ENV/
+.venv/

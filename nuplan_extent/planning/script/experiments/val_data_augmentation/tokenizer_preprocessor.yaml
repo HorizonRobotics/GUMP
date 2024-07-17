@@ -1,0 +1,7 @@
+tokenizer_preprocessor:
+  _target_: nuplan_extent.planning.training.data_augmentation.tokenizer_preprocessor.TokenizerPreprocessorAugmentor
+  _convert_: 'all'
+  num_past_steps: ${common_cfg.input_cfg.num_past_steps}
+  dataset: ${common_cfg.input_cfg.dataset}
+  target_width: ${common_cfg.input_cfg.target_width}
+  target_height: ${common_cfg.input_cfg.target_height}

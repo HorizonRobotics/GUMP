@@ -1,0 +1,4 @@
+crossentrophy_nar_metric:
+  _target_: nuplan_extent.planning.training.modeling.metrics.crossentrophy_nar_metric.CrossEntrophyNARMetric
+  _convert_: 'all'
+

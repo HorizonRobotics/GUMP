@@ -1,0 +1,40 @@
+# @package _global_
+job_name: training_wod_gump
+py_func: train
+objective_aggregate_mode: sum
+
+defaults:
+  - override /data_augmentation:
+      - convert_to_float
+      - tokenizer_preprocessor
+  - override /val_data_augmentation:
+      - convert_to_float
+      - tokenizer_preprocessor
+      
+  - override /objective:
+      - masked_cross_entrophy_objective
+      - agents_ade_objective_level0
+      - agents_ade_objective_level1
+      - agents_ade_objective_level2
+      - agents_ade_objective_level3
+      - agents_mtp_objective_level0
+      - agents_mtp_objective_level1
+      - agents_mtp_objective_level2
+      - agents_mtp_objective_level3
+  - override /splitter: wod
+  - override /model: gump_wod_gptm
+  - override /scenario_filter: training_scenarios
+  - override /training_metric:
+        - dummy_metric
+        # - sim_agents_metrics
+  - override /aggregated_metric:
+      - dummy_aggregated_metrics
+      # - sim_agents_metrics  
+  - override /common_cfg: gump
+  - override /callbacks: 
+    - learning_rate_monitor_callback
+    - model_checkpoint_callback
+    - time_logging_callback
+    - visualization_vectorized_reconstruction_callback
+
+  

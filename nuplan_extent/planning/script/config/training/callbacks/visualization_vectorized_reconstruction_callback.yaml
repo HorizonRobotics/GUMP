@@ -1,0 +1,16 @@
+visualization_vectorized_reconstruction_callback:
+  _target_: nuplan_extent.planning.training.callbacks.visualization_vectorized_reconstruction_callback.VisualizationVectorizedReconstructionCallback
+  _convert_: 'all'
+
+  images_per_tile: 1  # number of images per row
+  num_train_tiles: 1  # number of rows of training images
+  num_val_tiles: 1  # number of rows of validation images
+  pixel_size: 0.5  # [m] pixel size of image
+  num_frames: 1
+  num_future_imagine_frames: 1
+  num_past_imagine_frames: 24
+  canvas_size: 416
+  vis_autoencoder: False
+  vis_trajectory: False
+  dataset: ${common_cfg.input_cfg.dataset}
+

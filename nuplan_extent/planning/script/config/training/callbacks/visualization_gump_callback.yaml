@@ -1,0 +1,16 @@
+visualization_gump_callback:
+  _target_: nuplan_extent.planning.training.callbacks.visualization_gump_callback.VisualizationGUMPCallback
+  _convert_: 'all'
+  
+  images_per_tile: 4  # number of images per row
+  num_train_tiles: 4  # number of rows of training images
+  num_val_tiles: 4  # number of rows of validation images
+  pixel_size: 0.5  # [m] pixel size of image
+  canvas_size: 416
+  raster_type:
+    roadmap: [0.0, 0.0, 0.2]  # Dim Blue
+    baseline_paths: [0.0, 0.5, 0.0]  # Dim Green
+    route: [0.0, 0.0, 0.2]  # Dim Yellow
+    drivable_area: [0.0, 0.2, 0.0]  # Dim Cyan
+    static_agents_raster: [1.0, 0.0, 0.0]  # Dim Red
+  dataset: ${common_cfg.input_cfg.dataset}

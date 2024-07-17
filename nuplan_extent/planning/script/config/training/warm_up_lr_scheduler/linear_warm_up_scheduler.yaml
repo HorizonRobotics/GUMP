@@ -1,0 +1,8 @@
+scheduler:
+  _target_: torch.optim.lr_scheduler.LinearLR
+  _convert_: 'all'
+
+  start_factor: 0.333333333
+  end_factor: 1.0
+  total_iters: 500
+milestone: 500

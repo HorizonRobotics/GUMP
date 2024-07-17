@@ -1,0 +1,8 @@
+_target_: nuplan_extent.planning.training.closed_loop.controllers.two_stage_controller.TwoStageEgoControllerBatched
+_convert_: 'all'
+
+defaults:
+  - tracker: ilqr_tracker_batched
+  - motion_model: kinematic_bicycle_model_batched
+step_time: 0.5
+future_horizon: ${model.future_trajectory_sampling.time_horizon}

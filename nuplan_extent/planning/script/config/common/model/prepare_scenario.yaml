@@ -1,0 +1,59 @@
+_target_: nuplan_extent.planning.training.preprocessing.feature_builders.prepared_scenario_builder.PreparedScenarioModelWrapper
+
+future_trajectory_sampling:
+  _target_: nuplan.planning.simulation.trajectory.trajectory_sampling.TrajectorySampling
+  num_poses: ${common_cfg.output_cfg.trajectory_steps}  # number of poses in a trajectory
+  time_horizon: ${common_cfg.output_cfg.time_horizon}  # [s] time horizon of all poses
+
+prepared_scenario_builder:
+  _target_: nuplan_extent.planning.training.preprocessing.feature_builders.prepared_scenario_builder.PreparedScenarioBuilder
+  iteration_step: 2
+  builders:
+    - _target_: nuplan_extent.planning.training.preprocessing.feature_builders.horizon_raster_feature_builder_v2.HorizonRasterFeatureBuilderV2
+      _convert_: 'all'
+      raster_names:
+        - 'roadmap'
+        - 'baseline_paths'
+        - 'route'
+        - 'ego_speed'
+        - 'drivable_area'
+        - 'static_agents_raster'
+      map_features:
+        LANE: 1.0
+        INTERSECTION: 1.0
+        STOP_LINE: 0.5
+        CROSSWALK: 0.5
+      target_width: ${common_cfg.input_cfg.target_width}
+      target_height: ${common_cfg.input_cfg.target_height}
+      target_pixel_size: ${common_cfg.input_cfg.target_pixel_size}
+      ego_width: 2.297
+      ego_front_length: 4.049
+      ego_rear_length: 1.127
+      ego_longitudinal_offset: 0.0
+      baseline_path_thickness: 1
+      past_time_horizon: 2.0
+      past_num_poses: 4
+      max_speed_normalizer: ${common_cfg.input_cfg.max_speed_normalizer} 
+      use_uint8: true
+
+    - _target_: nuplan_extent.planning.training.preprocessing.feature_builders.horizon_vector_feature_builder_v2.HorizonVectorFeatureBuilderV2
+      _convert_: 'all'
+      agent_features:
+        - 'VEHICLE'
+        - 'PEDESTRIAN'
+        - 'BICYCLE'
+      radius: 150
+      longitudinal_offset: 0.0
+      past_time_horizon: 2.0
+      past_num_steps: 4
+      future_time_horizon: 0.0
+      future_num_steps: 0
+      num_max_agents:
+        - 256
+        - 128
+        - 32
+        
+    - _target_: nuplan_extent.planning.training.preprocessing.target_builders.ego_trajectory_target_builder_v2.EgoTrajectoryTargetBuilderV2
+      future_trajectory_sampling: ${model.future_trajectory_sampling}
+
+    - _target_: nuplan_extent.planning.simulation.progress_reward.ProgressReward

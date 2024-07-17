@@ -1,0 +1,6 @@
+SminADE_aggregated_metrics_ego:
+  _target_: nuplan_extent.planning.training.modeling.aggregated_metrics.SminADE_aggregated_metrics.SminADEAggregatedMetric
+  _convert_: 'all'
+
+  is_avg_corner_dist: false
+  is_ego: true

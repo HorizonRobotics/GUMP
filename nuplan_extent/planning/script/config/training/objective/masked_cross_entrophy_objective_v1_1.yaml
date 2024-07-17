@@ -1,0 +1,5 @@
+masked_cross_entrophy_objective_v1_1:
+  _target_: nuplan_extent.planning.training.modeling.objectives.masked_cross_entrophy_objective_v1_1.MaskedCrossEntrophyObjectiveV1_1
+  _convert_: 'all'
+  
+  weight: 1.0

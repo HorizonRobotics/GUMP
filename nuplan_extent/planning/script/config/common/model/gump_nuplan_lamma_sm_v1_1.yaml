@@ -1,0 +1,128 @@
+_target_: nuplan_extent.planning.training.modeling.models.gump_v1_1.GUMPV1_1
+_convert_: 'all'
+
+image_encoder:
+  _target_: nuplan_extent.planning.training.modeling.models.encoders.raster_encoder_v2.RasterEncoderV3
+  _convert_: 'all'
+  backbone_name: 'resnet34'
+  input_raster_names:
+    - 'roadmap'
+    - 'baseline_paths'
+    - 'route'
+    - 'ego_speed'
+    - 'drivable_area'
+    - 'static_agents_raster'
+  pretrained: false
+  output_stride: 32
+  out_indices: [4]
+  max_batch_size: -1
+  lean: false
+  out_dim: 512
+  n_embed: 384
+
+tokenizer:
+  _target_: nuplan_extent.planning.training.modeling.models.tokenizers.gump_tokenizer.GUMPTokenizer
+  _convert_: 'all'
+  max_seq_len: 10240
+  random_start: true
+  shuffle: false
+
+embedder:
+  _target_: nuplan_extent.planning.training.modeling.models.embedders.gump_embedder.GUMPEmbedder
+  _convert_: 'all'
+  map_range: ${common_cfg.input_cfg.raster_map_bev_range}
+  n_embd: 384
+  block_size: 2048
+
+transition_model:
+  _target_: nuplan_extent.planning.training.modeling.models.transition_models.transition_model_v1_1.TransitionModelV1_1
+  _convert_: 'all'
+  init_from: 'llama3' # 'scratch' or 'gpt2' or 'gpt2-medium' or 'gpt2-large' or 'gpt2-xl'
+  block_size: 2048 # 145*3 7 second history max
+  temperature: 1.0
+  top_k: 10
+  dropout: 0.1
+  n_layer: 6
+  n_head: 6
+  n_embd: 384
+
+token_decoder:
+  _target_: nuplan_extent.planning.training.modeling.models.decoders.gump_token_decoder.GUMPTokenDecoder
+  _convert_: 'all'
+  n_embed: 384
+  num_rnn_layers: 1
+  num_agent_attributes: 3
+  block_size: 2048
+  temperature: 1.0
+  topk: 40
+
+render:
+  _target_: nuplan_extent.planning.training.modeling.models.renders.gump_render.GUMPRender
+  _convert_: 'all'
+
+# postprocessor:
+#   _target_: nuplan_extent.planning.training.modeling.models.post_processors.gump_naive_planner.GUMPNaivePlanner
+#   _convert_: 'all'
+
+# Parameters for predicted trajectory
+future_trajectory_sampling:
+  _target_: nuplan.planning.simulation.trajectory.trajectory_sampling.TrajectorySampling
+  _convert_: 'all'
+  num_poses: ${common_cfg.output_cfg.trajectory_steps}  # number of poses in a trajectory
+  time_horizon: ${common_cfg.output_cfg.time_horizon}  # [s] time horizon of all poses
+
+# All feature builders
+feature_builders:
+  - _target_: nuplan_extent.planning.training.preprocessing.feature_builders.horizon_raster_feature_builder_v2.HorizonRasterFeatureBuilderV2
+    _convert_: 'all'
+    raster_names:
+      - 'roadmap'
+      - 'baseline_paths'
+      - 'route'
+      - 'ego_speed'
+      - 'drivable_area'
+      - 'static_agents_raster'
+    map_features:
+      LANE: 1.0
+      INTERSECTION: 1.0
+      STOP_LINE: 0.5
+      CROSSWALK: 0.5
+    target_width: ${common_cfg.input_cfg.target_width}
+    target_height: ${common_cfg.input_cfg.target_height}
+    target_pixel_size: ${common_cfg.input_cfg.target_pixel_size}
+    ego_width: 2.297
+    ego_front_length: 4.049
+    ego_rear_length: 1.127
+    ego_longitudinal_offset: 0.0
+    baseline_path_thickness: 1
+    past_time_horizon: 2.0
+    past_num_poses: 4
+    max_speed_normalizer: ${common_cfg.input_cfg.max_speed_normalizer} 
+    use_uint8: true
+
+  - _target_: nuplan_extent.planning.training.preprocessing.feature_builders.horizon_vector_feature_builder_v2.HorizonVectorFeatureBuilderV2
+    _convert_: 'all'
+    agent_features:
+      - 'VEHICLE'
+      - 'PEDESTRIAN'
+      - 'BICYCLE'
+    radius: 150
+    longitudinal_offset: 0.0
+    past_time_horizon: 2.0
+    past_num_steps: 4
+    future_time_horizon: 8.0
+    future_num_steps: 16
+    num_max_agents:
+      - 256
+      - 128
+      - 32
+
+target_builders:
+  - _target_: nuplan_extent.planning.training.preprocessing.feature_builders.ego_trajectory_with_past_target_builder.EgoTrajectoryWithPastTargetBuilder
+    _convert_: 'all'
+    future_trajectory_sampling: ${model.future_trajectory_sampling}
+
+num_paralell_scenario: 16
+
+# downstream_task: ${common_cfg.downstream_task}
+downstream_task: 'scenario_extrapolation' # 'planning'
