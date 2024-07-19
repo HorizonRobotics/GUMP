@@ -7,23 +7,9 @@ https://github.com/openai/gpt-2/blob/master/src/model.py
 https://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt2/modeling_gpt2.py
 """
 
-import math
-
-import torch
-import copy
-import numpy as np
-import torch.nn as nn
 from torch.nn import functional as F
 
-from einops import rearrange, repeat
-from einops_exts import rearrange_many
-
 from nuplan_extent.planning.training.modeling.models.modules.nanoGPT.base_model import GPTConfig, GPTBase
-from nuplan_extent.planning.training.preprocessing.features.tokenized_objects.sequenced_tokens.output_token_sequence import OutputTokenSequence
-from nuplan_extent.planning.training.preprocessing.features.tokenized_objects.sequenced_tokens.rl_output_token_sequence import RLOutputTokenSequence
-
-from nuplan_extent.planning.training.preprocessing.features.tokenized_objects.single_token.control_token.bos_token import BOSToken
-from torch.utils.checkpoint import checkpoint
 
 class GPTV2(GPTBase):
     def __init__(self, config, temperature=1.0, top_k=None):
