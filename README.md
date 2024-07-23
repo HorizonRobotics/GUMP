@@ -9,7 +9,7 @@
 <h3 align="center">
   <a href="https://arxiv.org/abs/2407.02797">arXiv</a> 
 </h3>
- 
+
 <div style="text-align:center">
   Yihan Hu, Siqi Chai, Zhening Yang, Jingyu Qian, Kun Li, Wenxin Shao, Haichao Zhang, Wei Xu, and Qiang Liu<br>
   Horizon Robotics
