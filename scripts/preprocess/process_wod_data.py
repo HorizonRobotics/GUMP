@@ -37,6 +37,7 @@ def get_wod_prediction_challenge_split(
                 if e == ext:
                     file_list.append(os.path.join(root, f))
     return file_list
+
 def main(src_path: str, dst_path: str, split: str) -> None:
     """
     Dump samples in tfrecord to pickles.
@@ -47,26 +48,33 @@ def main(src_path: str, dst_path: str, split: str) -> None:
     Return: None
     """
     tfrecord_list = get_wod_prediction_challenge_split(split, src_path)
-    dst_path = os.path.join(dst_path, split)
-    if not os.path.isdir(dst_path):
-        os.makedirs(dst_path, mode=0o777)   
+    pickle_path = os.path.join(dst_path, split)
+    if not os.path.isdir(pickle_path):
+        os.makedirs(pickle_path, mode=0o777)   
+    sdc_token_list = []
     for tf_file in tfrecord_list:
         dataset = tf.data.TFRecordDataset(tf_file, compression_type='')
         for data in dataset:
             proto_string = data.numpy()
             proto = scenario_pb2.Scenario()
             proto.ParseFromString(proto_string)
-            outfile =  os.path.join(dst_path, proto.scenario_id + ".pkl")
+            sdc_token_list.append(proto.scenario_id + "_" + str(proto.sdc_track_index))
+            outfile = os.path.join(pickle_path, proto.scenario_id + ".pkl")
             with open(outfile, 'wb') as handle:
                 pickle.dump(proto, handle, protocol=pickle.HIGHEST_PROTOCOL) 
         print("finished split {}".format(tf_file))
+    # save sdc token list to a txt file in dst path
+    sdc_token_file = os.path.join(dst_path, split + "_token_list.txt")
+    with open(sdc_token_file, 'w') as f:
+        for item in sdc_token_list:
+            f.write("%s\n" % item)
 
         
 if __name__ == '__main__':
     wod_path = 'PATH_TO_WOD_MOTION_DATASET'
     src_path = os.path.join(wod_path, 'scenario/')  
     dst_path = os.path.join(wod_path, 'scenario_pkl_v1_2/')
-    splits = ['validation', 'training', 'testing', 'validation_interactive', 'testing_interactive', 'training_20s']
+    splits = ['validation', 'training', 'testing']
     for split in splits:
         print("start split {}".format(split))
         main(src_path, dst_path, split)
