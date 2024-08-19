@@ -60,11 +60,11 @@ Our release roadmap outlines the planned development and upcoming features:
 - [x] More advanced architecture, i.e Llama3
 - [x] Downstream Task: Reactive Simulation
 - [x] Evaluation Metrics
-- [ ] Support the Waymo Dataset
+- [x] Support the Waymo Dataset
 - [ ] Downstream Task: Scenario Generation
 - [ ] Downstream Task: Policy Enhancement
 - [ ] Downstream Task: Reinforcement Learning
-- [ ] Compatible with various tokenizers, including [Trajeglish](https://arxiv.org/abs/2312.04535) and [MotionLM](https://arxiv.org/abs/2309.16534).
+- [ ] Compatible with various tokenizers, including [Trajeglish](https://arxiv.org/abs/2312.04535), [MotionLM](https://arxiv.org/abs/2309.16534), [KiGRAS] (https://arxiv.org/abs/2407.12940).
 
 ### Future Versions
 - [ ] [Long-term] End to end learning

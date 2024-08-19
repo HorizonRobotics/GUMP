@@ -65,7 +65,7 @@ class WodScenarioBuilder(AbstractScenarioBuilder):
             self.training_token_list = [
                 line.strip() for line in f if line.strip()
             ]
-            self.training_token_list = self.training_token_list[::self.subsample_ratio]
+            self.training_token_list = self.training_token_list[self.start_index::self.subsample_ratio]
         with open(self.validation_token_list_path, 'r') as f:
             self.validation_token_list = [
                 line.strip() for line in f if line.strip()
