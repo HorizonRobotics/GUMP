@@ -92,6 +92,7 @@ class NpSequenceArray(np.ndarray):
     track_token_dim = 10
     class_type_dim = 11
     status_dim = 12
+    raw_id_dim = 13
 
     def __new__(cls, input_array):
         """Create a new instance of the array."""
@@ -157,6 +158,11 @@ class NpSequenceArray(np.ndarray):
     def class_type(self):
         """Array slice of class types."""
         return self[..., self.class_type_dim]
+    
+    @property
+    def raw_id(self):
+        """Raw ID of the agents (Waymo)"""
+        return self[..., self.raw_id_dim]
 
     @property
     def is_ego(self):
@@ -164,13 +170,13 @@ class NpSequenceArray(np.ndarray):
         return self[..., self.token_type_dim] == TokenType.EGO_TOKEN.value
 
 class NpTokenizedSequenceArray(NpSequenceArray):
-    dim = 19
-    tokenized_x_dim = 13
-    tokenized_y_dim = 14
-    tokenized_heading_dim = 15
-    next_tokenized_x_dim = 16
-    next_tokenized_y_dim = 17
-    next_tokenized_heading_dim = 18
+    dim = 20
+    tokenized_x_dim = 14
+    tokenized_y_dim = 15
+    tokenized_heading_dim = 16
+    next_tokenized_x_dim = 17
+    next_tokenized_y_dim = 18
+    next_tokenized_heading_dim = 19
 
 # Constants for NpSequenceArray
 TOKEN_TYPE_IDX = NpSequenceArray.token_type_dim

@@ -47,6 +47,7 @@ TRACK_TOKEN_DIM = NpSequenceArray.track_token_dim
 CLASS_TYPE_DIM = NpSequenceArray.class_type_dim
 NpSequence_DIM = NpSequenceArray.dim
 STATUS_DIM = NpSequenceArray.status_dim
+RAW_ID_DIM = NpSequenceArray.raw_id_dim
 
 # Constants for NpTokenizedSequenceArray
 NpTokenizedSequence_DIM = NpTokenizedSequenceArray.dim
@@ -65,7 +66,7 @@ MAX_TRACK_ID = VocabularyStateType.AGENTS.end
 
 # constant for ego width and length
 ego_width, ego_length = 2.297, 5.176 # hard code for nuplan
-
+AGENT_FEATURE_LEN = 8 # hard code for the dimention of vector data input
 
 @jit(nopython=True)
 def get_bos_array(frame_index):
@@ -126,6 +127,7 @@ def get_ego_array(frame_index, current_ego_array, track_id):
     ego_array[CLASS_TYPE_DIM] = ClassType.VEHICLE.value
     ego_array[TRACK_TOKEN_DIM] = -1
     ego_array[TRACK_ID_DIM] = track_id
+    ego_array[RAW_ID_DIM] = -1
     return ego_array
 
 
@@ -144,7 +146,11 @@ def get_agent_array(frame_index, current_agent_array, track_id, is_newborn, clas
     Returns:
         np.ndarray: A numpy array representing the agent's state in the sequence.
     """
-    track_token, vx, vy, heading, width, length, x, y = current_agent_array
+    raw_id = -1
+    if len(current_agent_array) == AGENT_FEATURE_LEN:
+        track_token, vx, vy, heading, width, length, x, y = current_agent_array
+    else:
+        track_token, vx, vy, heading, width, length, x, y, raw_id = current_agent_array
     agent_array = np.zeros((NpSequence_DIM, ))
     agent_array[TOKEN_TYPE_IDX] = TokenType.NEWBORN_AGENT_TOKEN.value if is_newborn else TokenType.AGENT_TOKEN.value
     agent_array[FRAME_INDEX_IDX] = frame_index
@@ -158,6 +164,7 @@ def get_agent_array(frame_index, current_agent_array, track_id, is_newborn, clas
     agent_array[CLASS_TYPE_DIM] = class_index
     agent_array[TRACK_ID_DIM] = track_id
     agent_array[TRACK_TOKEN_DIM] = track_token
+    agent_array[RAW_ID_DIM] = raw_id
     return agent_array
 
 
@@ -191,7 +198,11 @@ def get_track_id(class_index, current_agent_array, track_id_mapping):
     Returns:
         tuple: A tuple containing the track ID, newborn status, and updated track ID mapping.
     """
-    track_token, vx, vy, heading, width, length, x, y = current_agent_array
+    raw_id = -1
+    if len(current_agent_array) == AGENT_FEATURE_LEN:
+        track_token, vx, vy, heading, width, length, x, y = current_agent_array
+    else:
+        track_token, vx, vy, heading, width, length, x, y, raw_id = current_agent_array
     key = get_hash(class_index, track_token)
     track_ids = track_id_mapping.values()
     if key in track_id_mapping:
