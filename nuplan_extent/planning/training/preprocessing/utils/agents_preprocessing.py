@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 
 import torch
 from nuplan.common.actor_state.tracked_objects import (TrackedObjects)
@@ -7,6 +7,8 @@ from nuplan.planning.training.preprocessing.features.agents import (
     AgentFeatureIndex)
 from nuplan.planning.training.preprocessing.utils.agents_preprocessing import (
     AgentInternalIndex, _extract_agent_tensor, _validate_agent_internal_shape)
+from nuplan.planning.training.preprocessing.utils.agents_preprocessing import AgentInternalIndex, EgoInternalIndex
+from nuplan.common.geometry.torch_geometry import global_state_se2_tensor_to_local
 
 
 def sampled_tracked_objects_based_on_object_type(
@@ -161,69 +163,6 @@ def pack_agents_tensor_with_mask(
     return agents_tensor
 
 
-# fmt: off
-def build_generic_ego_features_from_tensor(
-    ego_feature: torch.Tensor,
-    reverse: bool = False,
-    force_validate_internal_shape: bool = True,
-    include_velocity: bool = True,
-    include_acceleration: bool = True,
-    other_feature_range: Optional[Tuple[int, int]] = None,
-) -> torch.Tensor:
-    """
-    Build ego vector features. Converts global coordinates to local.
-
-    NOTE: adapted from build_generic_ego_feature_from_tensor from nuplan.planning.training.preprocessing.utils.agents_preprocessing.py
-
-    :param ego_trajectory: a tensor of ego features with shape [num_frames, num_features].
-    :param reverse: if True, use the last frame as the key frame. defaults to False.
-    :param force_validate_internal_shape: set to False to use custom data, otherwise will do a
-        shape validation.
-    :param include_velocity: whether to include velocity during this process, defaults to True
-    :param include_acceleration: whether to include acceleration during this process, defaults to True
-    :param other_feature_range: index range of other features that stays untouched, must be tuple of (start, int).
-    :return: processed tensor.
-    """
-    if force_validate_internal_shape:
-        _validate_ego_internal_shape(ego_feature, expected_first_dim=2)
-
-    if reverse:
-        anchor_ego_pose = ego_feature[-1, [EgoInternalIndex.x(), EgoInternalIndex.y(), EgoInternalIndex.heading()]].squeeze().double()
-        anchor_ego_velocity = ego_feature[-1, [EgoInternalIndex.vx(), EgoInternalIndex.vy(), EgoInternalIndex.heading()]].squeeze().double() if include_velocity else None  # vx, vy, heading
-        anchor_ego_acceleration = ego_feature[-1, [EgoInternalIndex.ax(), EgoInternalIndex.ay(), EgoInternalIndex.heading()]].squeeze().double() if include_acceleration else None  # ax, ay, heading
-    else:
-        anchor_ego_pose = ego_feature[0, [EgoInternalIndex.x(), EgoInternalIndex.y(), EgoInternalIndex.heading()]].squeeze().double()
-        anchor_ego_velocity = ego_feature[0, [EgoInternalIndex.vx(), EgoInternalIndex.vy(), EgoInternalIndex.heading()]].squeeze().double() if include_velocity else None  # vx, vy, heading
-        anchor_ego_acceleration = ego_feature[0, [EgoInternalIndex.ax(), EgoInternalIndex.ay(), EgoInternalIndex.heading()]].squeeze().double() if include_acceleration else None  # ax, ay, heading
-
-    global_ego_poses = ego_feature[:, [EgoInternalIndex.x(), EgoInternalIndex.y(), EgoInternalIndex.heading()]]
-    global_ego_velocities = ego_feature[:, [EgoInternalIndex.vx(), EgoInternalIndex.vy(), EgoInternalIndex.heading()]]
-    global_ego_acceleration = ego_feature[:, [EgoInternalIndex.ax(), EgoInternalIndex.ay(), EgoInternalIndex.heading()]]
-
-    local_ego_poses = global_state_se2_tensor_to_local(global_ego_poses, anchor_ego_pose, precision=torch.float64)
-    if include_velocity:
-        local_ego_velocities = global_state_se2_tensor_to_local(global_ego_velocities, anchor_ego_velocity, precision=torch.float64)
-    if include_acceleration:
-        local_ego_acceleration = global_state_se2_tensor_to_local(global_ego_acceleration, anchor_ego_acceleration, precisoin=torch.float64)
-
-    local_ego_trajectory: torch.Tensor = torch.empty(ego_feature.size(), dtype=torch.float32, device=ego_feature.device)
-    local_ego_trajectory[:, EgoInternalIndex.x()] = local_ego_poses[:, 0].float()
-    local_ego_trajectory[:, EgoInternalIndex.y()] = local_ego_poses[:, 1].float()
-    local_ego_trajectory[:, EgoInternalIndex.heading()] = local_ego_poses[:, 2].float()
-    if include_velocity:
-        local_ego_trajectory[:, EgoInternalIndex.vx()] = local_ego_velocities[:, 0].float()
-        local_ego_trajectory[:, EgoInternalIndex.vy()] = local_ego_velocities[:, 1].float()
-    if include_acceleration:
-        local_ego_trajectory[:, EgoInternalIndex.ax()] = local_ego_acceleration[:, 0].float()
-        local_ego_trajectory[:, EgoInternalIndex.ay()] = local_ego_acceleration[:, 1].float()
-
-    if other_feature_range is not None:
-        start, end = other_feature_range
-        local_ego_trajectory[:, start:end] = ego_feature[:, start:end].float()
-    return local_ego_trajectory
-# fmt: on
-
-
 def filter_agents_tensor(
     agents: List[torch.Tensor],
     reverse: bool = False,
@@ -282,11 +221,10 @@ def convert_absolute_quantities_to_relative(
     :param force_validate_internal_shape: whether to validate shape. Set to False to apply function to custom data
     :param custom_agent_index: a int list with length of 5, specifying the index of x, y, heading, vx and vy of agent data.
     """
-    if force_validate_internal_shape:
-        _validate_agent_internal_shape(ego_state, expected_first_dim=1)
+    # if force_validate_internal_shape:
+    #     _validate_agent_internal_shape(ego_state, expected_first_dim=1)
 
     ego_pose = torch.tensor([float(ego_state[EgoInternalIndex.x()].item()), float(ego_state[EgoInternalIndex.y()].item()), float(ego_state[EgoInternalIndex.heading()].item())], dtype=torch.float64)  # fmt: skip
-    ego_velocity = torch.tensor([float(ego_state[EgoInternalIndex.vx()].item()), float(ego_state[EgoInternalIndex.vy()].item()), float(ego_state[EgoInternalIndex.heading()].item())])  # fmt: skip
 
     if custom_agent_index is None:
         agent_x_idx = AgentInternalIndex.x()
@@ -310,12 +248,33 @@ def convert_absolute_quantities_to_relative(
         agent_state[:, agent_x_idx] = transformed_poses[:, 0].float()
         agent_state[:, agent_y_idx] = transformed_poses[:, 1].float()
         agent_state[:, agent_heading_idx] = transformed_poses[:, 2].float()
+
         if not position_only:
-            agent_global_velocities = agent_state[:, [agent_vx_idx, agent_vy_idx, agent_heading_idx, ]].double()  # fmt: skip
-            transformed_velocities = global_state_se2_tensor_to_local(
-                agent_global_velocities, ego_velocity, precision=torch.float64
-            )
+            # Transform velocities (rotation only)
+            agent_global_velocities = agent_state[:, [agent_vx_idx, agent_vy_idx]].double()
+            transformed_velocities = rotate_vectors_to_local(agent_global_velocities, ego_pose[2], precision=torch.float64)
             agent_state[:, agent_vx_idx] = transformed_velocities[:, 0].float()
             agent_state[:, agent_vy_idx] = transformed_velocities[:, 1].float()
 
     return agent_states
+
+def rotate_vectors_to_local(
+    vectors: torch.Tensor, local_heading: float, precision: Optional[torch.dtype] = None
+) -> torch.Tensor:
+    """
+    Rotates vectors to the local frame.
+
+    :param vectors: A tensor of Nx2, where columns are [vx, vy].
+    :param local_heading: The heading angle of the local frame.
+    :param precision: The precision to use.
+    :return: Rotated vectors in the local frame.
+    """
+    if precision is None:
+        precision = vectors.dtype
+
+    cos_h = torch.cos(local_heading).type(precision)
+    sin_h = torch.sin(local_heading).type(precision)
+    rotation_matrix = torch.tensor([[cos_h, -sin_h], [sin_h, cos_h]], dtype=precision)
+
+    rotated_vectors = torch.matmul(vectors, rotation_matrix)
+    return rotated_vectors

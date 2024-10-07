@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 import torch
+from copy import deepcopy
 import numpy as np
 import numpy.typing as npt
 import torch
@@ -181,47 +182,29 @@ def build_generic_ego_features_from_tensor(
         .squeeze()
         .double()
     )
-    anchor_ego_velocity = (
-        ego_trajectory[
-            ego_state_index, [
-                EgoInternalIndex.vx(), EgoInternalIndex.vy(), EgoInternalIndex.heading()]
-        ]
-        .squeeze()
-        .double()
-    )
-    anchor_ego_acceleration = (
-        ego_trajectory[
-            ego_state_index, [
-                EgoInternalIndex.ax(), EgoInternalIndex.ay(), EgoInternalIndex.heading()]
-        ]
-        .squeeze()
-        .double()
-    )
 
     global_ego_poses = ego_trajectory[
         :, [EgoInternalIndex.x(), EgoInternalIndex.y(), EgoInternalIndex.heading()]
     ].double()
     global_ego_velocities = ego_trajectory[
-        :, [EgoInternalIndex.vx(), EgoInternalIndex.vy(), EgoInternalIndex.heading()]
+        :, [EgoInternalIndex.vx(), EgoInternalIndex.vy()]
     ].double()
     global_ego_accelerations = ego_trajectory[
-        :, [EgoInternalIndex.ax(), EgoInternalIndex.ay(), EgoInternalIndex.heading()]
+        :, [EgoInternalIndex.ax(), EgoInternalIndex.ay()]
     ].double()
 
     local_ego_poses = global_state_se2_tensor_to_local(
         global_ego_poses, anchor_ego_pose, precision=torch.float64)
-    local_ego_velocities = global_state_se2_tensor_to_local(
-        global_ego_velocities, anchor_ego_velocity, precision=torch.float64
+    local_ego_velocities = rotate_vectors_to_local(
+        global_ego_velocities, anchor_ego_pose[-1], precision=torch.float64
     )
-    local_ego_accelerations = global_state_se2_tensor_to_local(
-        global_ego_accelerations, anchor_ego_acceleration, precision=torch.float64
+    local_ego_accelerations = rotate_vectors_to_local(
+        global_ego_accelerations, anchor_ego_pose[-1], precision=torch.float64
     )
 
     # Minor optimization. The indices in GenericEgoFeatureIndex and
     # EgoInternalIndex are the same.
-    local_ego_trajectory: torch.Tensor = torch.empty(
-        ego_trajectory.size(), dtype=torch.float32, device=ego_trajectory.device
-    )
+    local_ego_trajectory = deepcopy(ego_trajectory)
     local_ego_trajectory[:,
                          EgoInternalIndex.x()] = local_ego_poses[:,
                                                                  0].float()
@@ -241,6 +224,41 @@ def build_generic_ego_features_from_tensor(
     )] = local_ego_accelerations[:, 1].float()
 
     return local_ego_trajectory
+
+def rotate_vectors_to_local(
+    vectors: torch.Tensor, local_heading: torch.Tensor, precision: Optional[torch.dtype] = None
+) -> torch.Tensor:
+    """
+    Rotates vectors to the local frame.
+
+    :param vectors: A tensor of shape (..., 2), where the last dimension is [vx, vy].
+    :param local_heading: A tensor of shape broadcastable to vectors.shape[:-1].
+    :param precision: The precision to use.
+    :return: Rotated vectors in the local frame of shape (..., 2).
+    """
+    if precision is None:
+        precision = vectors.dtype
+
+    # Ensure local_heading has the correct precision
+    local_heading = local_heading.type(precision)
+
+    # Compute cosine and sine of headings
+    cos_h = torch.cos(local_heading)
+    sin_h = torch.sin(local_heading)
+
+    # Extract vector components
+    vx = vectors[..., 0]
+    vy = vectors[..., 1]
+
+    # Perform element-wise rotation
+    rotated_x = cos_h * vx + sin_h * vy
+    rotated_y = -sin_h * vx + cos_h * vy
+
+    # Stack the rotated components back into a tensor
+    rotated_vectors = torch.stack((rotated_x, rotated_y), dim=-1)
+
+    return rotated_vectors
+
 
 
 def convert_to_uint8(value: npt.NDArray, scale: Optional[int] = 1):

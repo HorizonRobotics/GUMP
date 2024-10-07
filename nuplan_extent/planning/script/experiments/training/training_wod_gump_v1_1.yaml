@@ -10,15 +10,14 @@ defaults:
       - convert_to_float
       
   - override /objective:
-    #   - masked_cross_entrophy_objective_v1_1
       - kinetics_cross_entropy_objective
-  - override /splitter: nuplan
+  - override /splitter: wod
   - override /model: gump_nuplan_gptbase_v1_1
   - override /scenario_filter: all_scenarios
   - override /training_metric:
       - dummy_metric
   - override /aggregated_metric:
-      - dummy_aggregated_metrics
+      - sim_agents_metrics
     #   - SminADE_aggregated_metrics
     #   - SminADE_aggregated_metrics_ego
     #   - SminADE_aggregated_metrics_cdist

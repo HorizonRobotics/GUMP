@@ -56,5 +56,5 @@ class DummyAggregatedMetric(Metric):
         """
         return {}
         
-    def log(self, logger, data: dict):
+    def log(self, logger, data: dict, global_step=None):
         pass

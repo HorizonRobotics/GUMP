@@ -1,0 +1,5 @@
+kinetics_cross_entropy_objective:
+  _target_: nuplan_extent.planning.training.modeling.objectives.kinetics_cross_entropy_objective.KineticsCrossEntropyObjective
+  _convert_: 'all'
+  
+  weight: 1.0

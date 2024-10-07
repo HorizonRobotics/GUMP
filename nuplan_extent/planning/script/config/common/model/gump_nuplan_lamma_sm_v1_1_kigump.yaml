@@ -18,46 +18,42 @@ image_encoder:
   max_batch_size: -1
   lean: false
   out_dim: 512
-  n_embed: 384
+  n_embed: 256
 
 tokenizer:
-  _target_: nuplan_extent.planning.training.modeling.models.tokenizers.gump_tokenizer.GUMPTokenizer
+  _target_: nuplan_extent.planning.training.modeling.models.tokenizers.kinetics_cached_tokenizer.KineticsCachedTokenizer
   _convert_: 'all'
-  max_seq_len: 10240
-  random_start: true
-  shuffle: false
 
 embedder:
-  _target_: nuplan_extent.planning.training.modeling.models.embedders.gump_embedder.GUMPEmbedder
+  _target_: nuplan_extent.planning.training.modeling.models.embedders.kinetics_embedder.KineticsEmbedder
   _convert_: 'all'
   map_range: ${common_cfg.input_cfg.raster_map_bev_range}
-  n_embd: 384
-  block_size: 2048
+  n_embd: 256
+  hidden: 256
 
 transition_model:
-  _target_: nuplan_extent.planning.training.modeling.models.transition_models.transition_model_v1_1.TransitionModelV1_1
+  _target_: nuplan_extent.planning.training.modeling.models.transition_models.kinetics_transition_model.KineticsTransitionModel
   _convert_: 'all'
-  init_from: 'llama3' # 'scratch' or 'gpt2' or 'gpt2-medium' or 'gpt2-large' or 'gpt2-xl'
-  block_size: 2048 # 145*3 7 second history max
+  block_size: 256 # 145*3 7 second history max
   temperature: 1.0
   top_k: 10
-  dropout: 0.1
-  n_layer: 6
-  n_head: 6
-  n_embd: 384
+  n_spatial_layer: 3
+  n_temporal_layer: 3
+  n_head: 4
+  n_embd: 256
 
 token_decoder:
-  _target_: nuplan_extent.planning.training.modeling.models.decoders.gump_token_decoder.GUMPTokenDecoder
+  _target_: nuplan_extent.planning.training.modeling.models.decoders.kinetics_token_decoder.KineticsTokenDecoder
   _convert_: 'all'
-  n_embed: 384
+  n_embed: 256
   num_rnn_layers: 1
-  num_agent_attributes: 3
-  block_size: 2048
+  num_agent_attributes: 1
+  block_size: 416
   temperature: 1.0
-  topk: 40
+  topk: 20
 
 render:
-  _target_: nuplan_extent.planning.training.modeling.models.renders.gump_render.GUMPRender
+  _target_: nuplan_extent.planning.training.modeling.models.renders.kinetics_render.KineticsRender
   _convert_: 'all'
 
 # postprocessor:
@@ -124,7 +120,7 @@ target_builders:
     _convert_: 'all'
     future_trajectory_sampling: ${model.future_trajectory_sampling}
 
-num_paralell_scenario: 16
+num_paralell_scenario: 1
 
 # downstream_task: ${common_cfg.downstream_task}
 downstream_task: 'scenario_extrapolation' # 'planning'

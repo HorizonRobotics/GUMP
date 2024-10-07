@@ -1,0 +1,65 @@
+_target_: nuplan_extent.planning.training.modeling.models.smart.SMART
+_convert_: 'all'
+
+map_encoder:
+  _target_: nuplan_extent.planning.training.modeling.models.encoders.smart_map_decoder.SMARTMapDecoder
+  _convert_: 'all'
+  input_dim: 2
+  hidden_dim: 128
+  num_historical_steps: 11
+  pl2pl_radius: 10
+  num_freq_bands: 64
+  num_layers: 3
+  num_heads: 8
+  head_dim: 16
+  dropout: 0.1
+  map_token_traj_path: "/root/workspace/GUMP/third_party/SMART/smart/tokens/map_traj_token5.pkl"
+
+tokenizer:
+  _target_: nuplan_extent.planning.training.modeling.models.tokenizers.smart_tokenizer.SMARTTokenizer
+  _convert_: 'all'
+  map_token_traj_path: "/root/workspace/GUMP/third_party/SMART/smart/tokens/map_traj_token5.pkl"
+
+transition_model:
+  _target_: nuplan_extent.planning.training.modeling.models.transition_models.smart_transition_model.SMARTTransitionModel
+  _convert_: 'all'
+  dataset: "waymo"
+  input_dim: 2
+  hidden_dim: 128
+  num_historical_steps: 11
+  time_span: 30
+  pl2a_radius: 30
+  a2a_radius: 60
+  num_freq_bands: 64
+  num_layers: 6
+  num_heads: 8
+  head_dim: 16
+  dropout: 0.1
+  token_size: 2048
+  token_path: "/root/workspace/GUMP/third_party/SMART/smart/tokens/cluster_frame_5_2048.pkl"
+
+# Parameters for predicted trajectory
+future_trajectory_sampling:
+  _target_: nuplan.planning.simulation.trajectory.trajectory_sampling.TrajectorySampling
+  _convert_: 'all'
+  num_poses: ${common_cfg.output_cfg.trajectory_steps}  # number of poses in a trajectory
+  time_horizon: ${common_cfg.output_cfg.time_horizon}  # [s] time horizon of all poses
+
+# All feature builders
+feature_builders:
+  - _target_: nuplan_extent.planning.training.preprocessing.feature_builders.waymo_smart_feature_builder.WaymoSmartFeatureBuilder
+    _convert_: 'all'
+    num_historical_steps: 11
+    num_future_steps: 80
+
+target_builders:
+  - _target_: nuplan_extent.planning.training.preprocessing.target_builders.sim_agents_target_builder.SimAgentsTargetBuilder
+    _convert_: 'all'
+    future_trajectory_sampling: ${model.future_trajectory_sampling}    
+
+# num_paralell_scenario: 32
+
+# downstream_task: ${common_cfg.downstream_task}
+# downstream_task: 'scenario_extrapolation' # 'planning'
+# num_imagine_frames: 16
+# num_conditioned_frames: 3

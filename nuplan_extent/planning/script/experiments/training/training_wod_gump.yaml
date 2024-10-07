@@ -25,8 +25,7 @@ defaults:
   - override /model: gump_wod_gptm
   - override /scenario_filter: training_scenarios
   - override /training_metric:
-        - dummy_metric
-        # - sim_agents_metrics
+        - sim_agents_metrics
   - override /aggregated_metric:
       - dummy_aggregated_metrics
       # - sim_agents_metrics  

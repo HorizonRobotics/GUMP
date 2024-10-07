@@ -18,46 +18,43 @@ image_encoder:
   max_batch_size: -1
   lean: false
   out_dim: 512
-  n_embed: 384
+  n_embed: 128
 
 tokenizer:
-  _target_: nuplan_extent.planning.training.modeling.models.tokenizers.gump_tokenizer.GUMPTokenizer
+  _target_: nuplan_extent.planning.training.modeling.models.tokenizers.kinetics_cached_tokenizer.KineticsCachedTokenizer
   _convert_: 'all'
-  max_seq_len: 10240
   random_start: true
-  shuffle: false
 
 embedder:
-  _target_: nuplan_extent.planning.training.modeling.models.embedders.gump_embedder.GUMPEmbedder
+  _target_: nuplan_extent.planning.training.modeling.models.embedders.kinetics_embedder.KineticsEmbedder
   _convert_: 'all'
   map_range: ${common_cfg.input_cfg.raster_map_bev_range}
-  n_embd: 384
-  block_size: 2048
+  n_embd: 128
+  hidden: 128
 
 transition_model:
-  _target_: nuplan_extent.planning.training.modeling.models.transition_models.transition_model_v1_1.TransitionModelV1_1
+  _target_: nuplan_extent.planning.training.modeling.models.transition_models.kinetics_transition_model.KineticsTransitionModel
   _convert_: 'all'
-  init_from: 'llama3' # 'scratch' or 'gpt2' or 'gpt2-medium' or 'gpt2-large' or 'gpt2-xl'
-  block_size: 2048 # 145*3 7 second history max
+  block_size: 256 # 145*3 7 second history max
   temperature: 1.0
   top_k: 10
-  dropout: 0.1
-  n_layer: 6
-  n_head: 6
-  n_embd: 384
+  n_spatial_layer: 3
+  n_temporal_layer: 3
+  n_head: 4
+  n_embd: 128
 
 token_decoder:
-  _target_: nuplan_extent.planning.training.modeling.models.decoders.gump_token_decoder.GUMPTokenDecoder
+  _target_: nuplan_extent.planning.training.modeling.models.decoders.kinetics_token_decoder.KineticsTokenDecoder
   _convert_: 'all'
-  n_embed: 384
+  n_embed: 128
   num_rnn_layers: 1
-  num_agent_attributes: 3
-  block_size: 2048
+  num_agent_attributes: 1
+  block_size: 416
   temperature: 1.0
-  topk: 40
+  topk: 20
 
 render:
-  _target_: nuplan_extent.planning.training.modeling.models.renders.gump_render.GUMPRender
+  _target_: nuplan_extent.planning.training.modeling.models.renders.kinetics_render.KineticsRender
   _convert_: 'all'
 
 # postprocessor:
@@ -73,23 +70,26 @@ future_trajectory_sampling:
 
 # All feature builders
 feature_builders:
-  - _target_: nuplan_extent.planning.training.preprocessing.feature_builders.horizon_raster_feature_builder_v2.HorizonRasterFeatureBuilderV2
+  - _target_: nuplan_extent.planning.training.preprocessing.feature_builders.waymo_raster_feature_builder_v2.WaymoRasterFeatureBuilderV2
     _convert_: 'all'
+
+    map_features:  # name of map features to be drawn and its color [0.0, 1.0] for encoding
+      BASELINE_PATHS: 1.0
+      EXTENDED_PUDO: 1.0
+      SPEED_BUMP: 0.5
+      CROSSWALK: 0.5
+      
     raster_names:
       - 'roadmap'
       - 'baseline_paths'
-      - 'route'
       - 'ego_speed'
       - 'drivable_area'
       - 'static_agents_raster'
-    map_features:
-      LANE: 1.0
-      INTERSECTION: 1.0
-      STOP_LINE: 0.5
-      CROSSWALK: 0.5
-    target_width: ${common_cfg.input_cfg.target_width}
-    target_height: ${common_cfg.input_cfg.target_height}
-    target_pixel_size: ${common_cfg.input_cfg.target_pixel_size}
+      - 'route'
+   
+    target_width: 416
+    target_height: 416
+    target_pixel_size: 0.5
     ego_width: 2.297
     ego_front_length: 4.049
     ego_rear_length: 1.127
@@ -97,19 +97,19 @@ feature_builders:
     baseline_path_thickness: 1
     past_time_horizon: 2.0
     past_num_poses: 4
-    max_speed_normalizer: ${common_cfg.input_cfg.max_speed_normalizer} 
+    max_speed_normalizer: 24.0 
     use_uint8: true
+    feature_time_interval: 0.5  # [s] time interval of each pose
 
-  - _target_: nuplan_extent.planning.training.preprocessing.feature_builders.horizon_vector_feature_builder_v2.HorizonVectorFeatureBuilderV2
-    _convert_: 'all'
+  - _target_: nuplan_extent.planning.training.preprocessing.feature_builders.waymo_vector_feature_builder_v2.WaymoVectorFeatureBuilderV2
     agent_features:
       - 'VEHICLE'
       - 'PEDESTRIAN'
       - 'BICYCLE'
     radius: 150
     longitudinal_offset: 0.0
-    past_time_horizon: 2.0
-    past_num_steps: 4
+    past_time_horizon: 1.0
+    past_num_steps: 2
     future_time_horizon: 8.0
     future_num_steps: 16
     num_max_agents:
@@ -120,11 +120,13 @@ feature_builders:
     _convert_: 'all'
 
 target_builders:
-  - _target_: nuplan_extent.planning.training.preprocessing.feature_builders.ego_trajectory_with_past_target_builder.EgoTrajectoryWithPastTargetBuilder
+  - _target_: nuplan_extent.planning.training.preprocessing.target_builders.sim_agents_target_builder.SimAgentsTargetBuilder
     _convert_: 'all'
-    future_trajectory_sampling: ${model.future_trajectory_sampling}
+    future_trajectory_sampling: ${model.future_trajectory_sampling}    
 
-num_paralell_scenario: 16
+num_paralell_scenario: 32
 
 # downstream_task: ${common_cfg.downstream_task}
 downstream_task: 'scenario_extrapolation' # 'planning'
+num_imagine_frames: 16
+num_conditioned_frames: 3

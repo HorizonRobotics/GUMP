@@ -70,6 +70,7 @@ class WodScenario(AbstractScenario):
             split: str,
             scenario_id: str,
             agent_idx: str,
+            smart_data_root: str = '',
     ) -> None:
         self._data_root = data_root
         self._split = split
@@ -78,6 +79,9 @@ class WodScenario(AbstractScenario):
         self._scenario_type = "waymo_open_dataset"
         self._pickle_path = os.path.join(self._data_root, self._split,
                                          self._scenario_id + ".pkl")
+        self._smart_data_root = smart_data_root
+        self._smart_pickle_path = os.path.join(smart_data_root, self._split,
+                                               self._scenario_id + ".pkl")
         self.ego_type = 1
         self.current_index = 10
         self.scenario_length = 91
@@ -87,6 +91,12 @@ class WodScenario(AbstractScenario):
         self.interactive_agent_type = None
 
         self._database_row_interval = 0.1
+    
+    @property
+    def smart_pickle_file(self): 
+        with open(self._smart_pickle_path, 'rb') as f:
+            data = pickle.load(f)
+        return data
 
     @property
     def split(self) -> str:
@@ -121,6 +131,9 @@ class WodScenario(AbstractScenario):
             all_agent_tracks = data.tracks
             if "interactive" in self._split:
                 assert self._agent_idx == data.tracks_to_predict[0].track_index
+        self.tracks_to_predict_raw_id = [data.tracks[cur_pred.track_index].id for cur_pred in data.tracks_to_predict]
+        if self._agent_idx < 0:
+            self._agent_idx = data.tracks_to_predict[0].track_index
         self.agent_id = all_agent_tracks[self._agent_idx].id
         self.ego_type = all_agent_tracks[self._agent_idx].object_type
         if "interactive" in self._split:

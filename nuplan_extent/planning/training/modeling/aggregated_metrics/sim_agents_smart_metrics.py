@@ -8,6 +8,7 @@ import numpy as np
 import pickle
 
 from torchmetrics import Metric
+from collections import defaultdict
 import tensorflow as tf
 # tf.config.set_visible_devices([], 'GPU')
 
@@ -130,8 +131,11 @@ class SimAgentsMetric(Metric):
         # batch of predictions, 
         # each prediction contains 32 parallel rollouts, 
         # each rollout contains a prediction of agents trajectories 8s into future (16 frames @ 2Hz)
-        sim_agents_rollouts = predictions['predicted_tokenized_arrays']  
-        bs = len(sim_agents_rollouts)
+
+        scenarioid2batchindex = defaultdict(list)
+        for i in range(len(predictions['scenario_id'])):
+            scenarioid2batchindex[predictions['scenario_id'][i][0]].append(i)
+        bs = len(targets['sim_agents'].scenario_id)
 
         # batch of targets
         # from third_party.functions.forked_pdb import ForkedPdb; ForkedPdb().set_trace()
@@ -140,7 +144,6 @@ class SimAgentsMetric(Metric):
 
         # update part
         for bi in range(bs):            
-            
             # process GT part
             with open(waymo_scenario_paths[bi], 'rb') as f:
                 waymo_scenario = pickle.load(f)
@@ -153,31 +156,22 @@ class SimAgentsMetric(Metric):
             
             self.all_saved_scenario_paths.append(scene_path)
             # process pred part
-            parallel_rollouts = sim_agents_rollouts[bi]  # 32 rollouts
-            result = self._compute_single_frame(parallel_rollouts, waymo_scenario, local_to_global_transforms[bi])
+            batch_index_list = scenarioid2batchindex[waymo_scenario.scenario_id]
+            batch_mask = torch.zeros(predictions['batch_index'].shape, dtype=torch.bool)
+            for i in range(batch_mask.shape[0]):
+                batch_mask[i] = predictions['batch_index'][i] in batch_index_list
+            parallel_rollouts = torch.cat([predictions['pred_traj'], predictions['pred_head'][..., None]], dim=-1)[batch_mask]
+            parallel_rollouts = parallel_rollouts.view(len(batch_index_list), -1, parallel_rollouts.shape[-2], parallel_rollouts.shape[-1])
+            pred_agent_ids = torch.tensor(predictions['pred_agent_ids'][batch_index_list[0]][0], dtype=torch.int32)
+            result = self._compute_single_frame(parallel_rollouts, waymo_scenario, local_to_global_transforms[bi], pred_agent_ids)
             self.all_results.append(result)
         return
-    
-    @staticmethod
-    def smoothing_trajectory(trajectory):
-        smoothing_factors = [9, 9, 1, 9, 9]
-        smoothed_trajectory = np.zeros(list(trajectory.shape[:3]) + [5])
-        smoothed_trajectory[..., :3] = trajectory[..., :3]
-        smoothed_trajectory[..., 3] = np.sin(trajectory[..., 3])
-        smoothed_trajectory[..., 4] = np.cos(trajectory[..., 3])
-        for i in range(trajectory.shape[0]):
-            for j in range(trajectory.shape[1]):
-                for dim in range(trajectory.shape[3]):
-                    if smoothing_factors[dim] > 1:
-                        smoothed_trajectory[i, j, :, dim] = smooth_window(smoothed_trajectory[i, j, :, dim], smoothing_factors[dim])
-        smoothed_trajectory[..., 3] = np.arctan2(smoothed_trajectory[..., 3], smoothed_trajectory[..., 4])
-        return smoothed_trajectory[..., :4]
         
-    def _compute_single_frame(self, parallel_rollouts, waymo_scenario, local_to_global_transforms):
+    def _compute_single_frame(self, parallel_rollouts, waymo_scenario, local_to_global_transforms, pred_agent_ids):
         logged_trajectories = trajectory_utils.ObjectTrajectories.from_scenario(waymo_scenario)
-        agent_ids = submission_specs.get_sim_agent_ids(waymo_scenario)
+        target_agent_ids = submission_specs.get_sim_agent_ids(waymo_scenario)
         logged_trajectories = logged_trajectories.gather_objects_by_id(
-            tf.convert_to_tensor(agent_ids))
+            tf.convert_to_tensor(target_agent_ids))
         logged_trajectories = logged_trajectories.slice_time(
             start_index=0, end_index=submission_specs.CURRENT_TIME_INDEX + 1)
         logged_trajectories_x = logged_trajectories.x.numpy()
@@ -202,8 +196,14 @@ class SimAgentsMetric(Metric):
                 logged_trajectories_z.ravel(),
                 ]).T
             zvalue_regressor.fit(pseudo_map_points[:, :2], pseudo_map_points[:, 2])
-        interpolated_predicted_trajectories = SimAgentsMetric.extract_predicted_trajectories(parallel_rollouts, agent_ids, local_to_global_transforms, zvalue_regressor, logged_trajectories_states, logged_trajectories_valid)
-        interpolated_predicted_trajectories = SimAgentsMetric.smoothing_trajectory(interpolated_predicted_trajectories)
+        # import pdb; pdb.set_trace()
+        interpolated_predicted_trajectories = SimAgentsMetric.extract_predicted_trajectories(parallel_rollouts.cpu(), 
+                                                                                             target_agent_ids, 
+                                                                                             pred_agent_ids, 
+                                                                                             local_to_global_transforms, 
+                                                                                             zvalue_regressor, 
+                                                                                             logged_trajectories_states, 
+                                                                                             logged_trajectories_valid)
         simulated_states = tf.convert_to_tensor(interpolated_predicted_trajectories[..., :4])
         scenario_rollouts = SimAgentsMetric.scenario_rollouts_from_states(
             waymo_scenario, simulated_states, logged_trajectories.object_id)
@@ -227,74 +227,17 @@ class SimAgentsMetric(Metric):
             'time_to_collision_likelihood': scenario_metrics.time_to_collision_likelihood,
             'distance_to_road_edge_likelihood': scenario_metrics.distance_to_road_edge_likelihood,
             'offroad_indication_likelihood': scenario_metrics.offroad_indication_likelihood,
+            'simulated_collision_rate': scenario_metrics.simulated_collision_rate,
+            'simulated_offroad_rate': scenario_metrics.simulated_offroad_rate,
             'min_average_displacement_error': scenario_metrics.min_average_displacement_error,
         }
         return scenario_result
     
     @staticmethod
-    def linear_interpolate_and_expand(
-        historical_values_10Hz, historical_valid_flags_10Hz,
-        predicted_value_nHz, predicted_valid_flag_nHz, expansion_ratio
-    ):
-        """
-        Perform linear interpolation between high-frequency (10Hz) historical data
-        and a predicted low-frequency (nHz) data point, then expand the interpolated values.
-
-        Parameters:
-        - historical_values_10Hz (np.ndarray): Historical high-frequency values (shape: [N, 4]).
-        - historical_valid_flags_10Hz (np.ndarray): Validity flags for historical data (shape: [N]).
-        - predicted_value_nHz (np.ndarray): Predicted low-frequency value (shape: [4]).
-        - predicted_valid_flag_nHz (bool): Validity flag for the predicted value.
-        - expansion_ratio (int): Number of points to expand during interpolation.
-
-        Returns:
-        - interpolated_output (np.ndarray): Interpolated and expanded values (shape: [expansion_ratio, 4]).
-        - new_interpolation_valid_flags (np.ndarray): Validity flags for interpolated values (shape: [expansion_ratio]).
-        """
-        assert historical_valid_flags_10Hz[-1], "The last historical data point must be valid."
-
-        total_interpolations = expansion_ratio + 1  # Total number of interpolation points
-
-        if predicted_valid_flag_nHz:
-            # Initialize interpolation array
-            interpolated_output = np.zeros((total_interpolations, 4))
-            # Linear interpolation for the first three dimensions (e.g., x, y, z)
-            interpolated_output[:, :3] = np.linspace(
-                historical_values_10Hz[-1, :3], predicted_value_nHz[:3], total_interpolations
-            )
-
-            # Interpolate the heading angles
-            start_heading, end_heading = historical_values_10Hz[-1, 3], predicted_value_nHz[3]
-            start_vector = np.array([np.cos(start_heading), np.sin(start_heading)])
-            end_vector = np.array([np.cos(end_heading), np.sin(end_heading)])
-            interpolated_vectors = np.linspace(start_vector, end_vector, total_interpolations)
-            normalized_vectors = interpolated_vectors / np.linalg.norm(interpolated_vectors, axis=1, keepdims=True)
-            interpolated_headings = np.arctan2(normalized_vectors[:, 1], normalized_vectors[:, 0])
-            interpolated_output[:, 3] = interpolated_headings
-
-            # Exclude the first interpolated point as it overlaps with the last historical point
-            interpolated_output = interpolated_output[1:, :]
-            new_interpolation_valid_flags = np.ones(expansion_ratio, dtype=bool)
-        else:
-            # If the predicted value is invalid, extrapolate based on the last two historical points
-            if len(historical_values_10Hz) >= 2 and historical_valid_flags_10Hz[-2]:
-                velocity = historical_values_10Hz[-1, :] - historical_values_10Hz[-2, :]
-            else:
-                velocity = np.zeros_like(historical_values_10Hz[-1, :])
-
-            # Extrapolate using the calculated velocity
-            extrapolated_values = historical_values_10Hz[-1, :] + np.outer(
-                np.arange(1, expansion_ratio + 1), velocity
-            )
-            interpolated_output = extrapolated_values
-            new_interpolation_valid_flags = np.ones(expansion_ratio, dtype=bool)
-
-        return interpolated_output, new_interpolation_valid_flags
-    
-    @staticmethod
     def extract_predicted_trajectories(
         parallel_rollouts,
-        agent_ids,
+        target_agent_ids,
+        pred_agent_ids,
         local_to_global_transforms,
         zvalue_regressor,
         logged_trajectories_states,
@@ -315,27 +258,22 @@ class SimAgentsMetric(Metric):
         - interpolated_predicted_trajectories (np.ndarray): 
             Interpolated predicted trajectories (shape: [N_worlds, N_agents, N_steps, N_dims]).
         """
-        N_worlds = 32
-        N_agents = len(agent_ids)
-        N_steps = 80
+        N_worlds = parallel_rollouts.shape[0]
+        N_agents = len(target_agent_ids)
+        N_steps = parallel_rollouts.shape[-2]
         N_dims = 4
-        N_predicted_frames = 19
-        frame_expansion_ratio = 5
 
         interpolated_predicted_trajectories = np.zeros((N_worlds, N_agents, N_steps, N_dims))
         
         for world_idx in range(N_worlds):
-            tokenized_data = parallel_rollouts[world_idx]
-            data_start_index = 2  # Assuming the relevant data starts at index 2
 
             # Extract raw agent IDs from the tokenized data
-            raw_agent_ids = tokenized_data[data_start_index, :, NpKineticsSequenceArray.raw_id_dim]
-            rawid_to_index_map = {int(raw_id): idx for idx, raw_id in enumerate(raw_agent_ids)}
+            rawid_to_index_map = {int(raw_id): idx for idx, raw_id in enumerate(pred_agent_ids)}
             
-            missing_agents = [agent_id for agent_id in agent_ids if agent_id not in rawid_to_index_map]
+            missing_agents = [agent_id for agent_id in target_agent_ids if agent_id not in rawid_to_index_map]
             if len(missing_agents) > 0:
                 print(f"Missing agents: {len(missing_agents)}/ {len(agent_ids)}")
-            for agent_idx, agent_id in enumerate(agent_ids):
+            for agent_idx, agent_id in enumerate(target_agent_ids):
                 if agent_id not in rawid_to_index_map:
                     # Handle missing agents if necessary
                     continue
@@ -343,19 +281,21 @@ class SimAgentsMetric(Metric):
                 token_index = rawid_to_index_map[agent_id]
 
                 # Extract position and heading information for the agent
-                x_positions = tokenized_data[:, token_index, NpKineticsSequenceArray.x_dim]
-                y_positions = tokenized_data[:, token_index, NpKineticsSequenceArray.y_dim]
+                x_positions = parallel_rollouts[world_idx, token_index, :, 0]
+                y_positions = parallel_rollouts[world_idx, token_index, :, 1]
                 positions_local = np.stack([x_positions, y_positions], axis=-1)
-                headings = tokenized_data[:, token_index, NpKineticsSequenceArray.heading_dim] % (2 * np.pi)
+                headings = parallel_rollouts[world_idx, token_index, :, 2] % (2 * np.pi)
 
                 # Apply local to global transformation
-                transformation_matrix = local_to_global_transforms.numpy()
-                positions_global = (transformation_matrix[:2, :2] @ positions_local.T).T + transformation_matrix[:2, -1]
+                # transformation_matrix = local_to_global_transforms.numpy()
+                # positions_global = (transformation_matrix[:2, :2] @ positions_local.T).T + transformation_matrix[:2, -1]
 
                 # Adjust headings based on rotation from the transformation matrix
-                rotation_angle = np.arctan2(transformation_matrix[1, 0], transformation_matrix[0, 0])
-                adjusted_headings = headings + rotation_angle
+                # rotation_angle = np.arctan2(transformation_matrix[1, 0], transformation_matrix[0, 0])
+                # adjusted_headings = headings + rotation_angle
 
+                positions_global = positions_local # no need to transform for smart
+                adjusted_headings = headings
                 # Compute z-values using the regressor
                 z_values = zvalue_regressor.predict(positions_global)
 
@@ -372,43 +312,7 @@ class SimAgentsMetric(Metric):
                     normalized_z,
                     adjusted_headings
                 ], axis=-1)
-
-                # Initialize interpolation arrays with logged trajectory data
-                interpolation_values = np.zeros((91, 4))
-                interpolation_values[:11, :] = np.array(logged_trajectories_states[agent_idx])
-
-                interpolation_valid_flags = np.zeros(91, dtype=bool)
-                interpolation_valid_flags[:11] = np.array(logged_trajectories_valid_flags[agent_idx])
-
-                # Perform interpolation for each prediction frame
-                # [0,1,2] condition 3
-                # [2-18] prediction 16
-                start_index = 3
-                for frame_idx in range(3, N_predicted_frames):
-                    history_length = 11 + frame_expansion_ratio * (frame_idx - start_index)
-                    historical_values = interpolation_values[:history_length, :]
-                    historical_valid = interpolation_valid_flags[:history_length]
-
-                    # Get the predicted value for the current frame
-                    current_predicted_value = predicted_values[frame_idx]
-
-                    # Interpolate and expand
-                    new_values, new_valid_flags = SimAgentsMetric.linear_interpolate_and_expand(
-                        historical_values_10Hz=historical_values,
-                        historical_valid_flags_10Hz=historical_valid,
-                        predicted_value_nHz=current_predicted_value,
-                        predicted_valid_flag_nHz=True,
-                        expansion_ratio=frame_expansion_ratio,
-                    )
-
-                    # Insert the new interpolated values into the interpolation array
-                    start_future = history_length
-                    end_future = history_length + frame_expansion_ratio
-                    interpolation_values[start_future:end_future, :] = new_values
-                    interpolation_valid_flags[start_future:end_future] = new_valid_flags
-
-                # Assign the interpolated trajectory to the output array
-                interpolated_predicted_trajectories[world_idx, agent_idx, :, :] = interpolation_values[11:, :]
+                interpolated_predicted_trajectories[world_idx, agent_idx] = predicted_values
         return interpolated_predicted_trajectories
 
     
@@ -450,7 +354,8 @@ class SimAgentsMetric(Metric):
     def to(self, device):
         return self
 
-    def log(self, logger, data):
+    def log(self, logger, data, global_step):
         if dist.get_rank() == 0:
             for k, v in data.items():
-                logger(f'sim_agents/{k}', v)
+                # Use the logger's experiment to log the scalar
+                logger.experiment.add_scalar(f'sim_agents/{k}', v, global_step=global_step)

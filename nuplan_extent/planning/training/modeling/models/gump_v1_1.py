@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class GUMPV1_1(TorchModuleWrapper):
     def __init__(
         self,
-        image_encoder: nn.Module,
+        map_encoder: nn.Module,
         tokenizer: nn.Module,
         embedder: nn.Module,
         transition_model: nn.Module,
@@ -35,6 +35,7 @@ class GUMPV1_1(TorchModuleWrapper):
         postprocessor: nn.Module = None,
         pretraining_path: str = None,
         num_paralell_scenario: int = 1,
+        num_imagine_frames: int = 16,
         num_conditioned_frames: int = 4,
         downstream_task: str = 'scenario_extrapolation',
     ):
@@ -48,7 +49,7 @@ class GUMPV1_1(TorchModuleWrapper):
             future_trajectory_sampling=future_trajectory_sampling,
         )
         self.preloader = preloader
-        self.image_encoder = image_encoder
+        self.map_encoder = map_encoder
         self.tokenizer = tokenizer
         self.embedder = embedder
         self.transition_model = transition_model
@@ -57,6 +58,7 @@ class GUMPV1_1(TorchModuleWrapper):
         self.postprocessor = postprocessor
         self._num_paralell_scenario = num_paralell_scenario
         self._num_conditioned_frames = num_conditioned_frames
+        self._num_imagine_frames = num_imagine_frames
         self._downstream_task = downstream_task
 
         self.pretraining_path = pretraining_path
@@ -127,9 +129,9 @@ class GUMPV1_1(TorchModuleWrapper):
             return self.forward_train(input_features)
         else:     
             if self._downstream_task == 'scenario_extrapolation':
-                return self.forward_inference(input_features, n_repeat=self._num_paralell_scenario, num_imagine_frames=16)
+                return self.forward_inference(input_features, n_repeat=self._num_paralell_scenario, num_imagine_frames=self._num_imagine_frames)
             elif self._downstream_task == 'planning':
-                infer_results = self.forward_inference(input_features, n_repeat=self._num_paralell_scenario, num_imagine_frames=16)
+                infer_results = self.forward_inference(input_features, n_repeat=self._num_paralell_scenario, num_imagine_frames=self._num_imagine_frames)
                 planning_results = self.postprocessor(infer_results)
                 if self._is_vis_features:
                     render_and_save_features(planning_results, self._vis_features_path, bev_range=[-104., -104., 104., 104.])
@@ -138,7 +140,7 @@ class GUMPV1_1(TorchModuleWrapper):
                 results = self.forward_train(input_features)
                 return results
             elif self._downstream_task == 'e2e':
-                infer_results = self.forward_inference(input_features, n_repeat=self._num_paralell_scenario, num_imagine_frames=16)
+                infer_results = self.forward_inference(input_features, n_repeat=self._num_paralell_scenario, num_imagine_frames=self._num_imagine_frames)
                 return infer_results
             else:
                 raise ValueError(f'Unknown downstream task: {self._downstream_task}')
@@ -150,15 +152,16 @@ class GUMPV1_1(TorchModuleWrapper):
         :param targets: targets
         """
         # Encode image
-        image_features = self.image_encoder(input_features)
-
+        image_features = self.map_encoder(input_features)
+        
         # Tokenize vectors
-        tokenized_dict = self.tokenizer.forward_train(input_features['vector'])
+        tokenized_dict = self.tokenizer.forward_train(input_features)
 
         tokenized_arrays = tokenized_dict.get('tokenized_arrays', None)
         latent_features = tokenized_dict.get('latent_features', None)
+
         # Transition model
-        pred_agent_logits, pred_agent_tokens, target_tokenized_state, pred_control_logits, target_ctrl_tokens, hidden = self.transition_model.forward_train(
+        pred_agent_logits, pred_agent_tokens, target_tokenized_state, pred_control_logits, target_ctrl_tokens, hidden, valid_mask = self.transition_model.forward_train(
             image_features=image_features,
             tokenized_arrays=tokenized_arrays,
             embedder=self.embedder,
@@ -173,7 +176,8 @@ class GUMPV1_1(TorchModuleWrapper):
             'pred_control_logits': pred_control_logits,
             'target_tokenized_state': target_tokenized_state,
             'tokenized_arrays': tokenized_arrays,
-            'representation': hidden[-1]
+            'representation': hidden[-1],
+            'valid_mask': valid_mask
         }
 
     def forward_inference(self, input_features: FeaturesType, n_repeat: int = 1, num_imagine_frames: int = 1) -> Dict:
@@ -183,19 +187,27 @@ class GUMPV1_1(TorchModuleWrapper):
         :return: predictions from network
         """
         # Encode image
-        image_features = self.image_encoder(input_features)
+        image_features = self.map_encoder(input_features)
 
         # Tokenize vectors
-        tokenized_dict = self.tokenizer.forward_inference(input_features['vector'])
+        tokenized_dict = self.tokenizer.forward_inference(input_features)
 
         image_features = repeat(image_features, 'b l c -> (b n) l c', n=n_repeat)
 
-        tokenized_dict = {k: repeat(arr, 'b l c -> (b n) l c', n=n_repeat) for k, arr in tokenized_dict.items()}
+        tokenized_dict = {k: repeat(arr, 'b ... -> (b n) ...', n=n_repeat) for k, arr in tokenized_dict.items()}
         tokenized_arrays = tokenized_dict.get('tokenized_arrays', None)
         latent_features = tokenized_dict.get('latent_features', None)
         gt_tokenized_arrays = tokenized_dict.get('gt_tokenized_arrays', None)
 
         # Transition model
+        # predicted_tokenized_arrays = self.transition_model.forward_inference_test(
+        #     image_features=image_features,
+        #     tokenized_arrays=tokenized_arrays,
+        #     embedder=self.embedder,
+        #     token_decoder=self.token_decoder,
+        #     render=self.render,
+        #     num_imagine_frames=16,
+        #     num_conditioned_frames=4)
         predicted_tokenized_arrays = self.transition_model.forward_inference_without_cache(
             image_features=image_features,
             tokenized_arrays=tokenized_arrays,
@@ -207,10 +219,10 @@ class GUMPV1_1(TorchModuleWrapper):
             num_conditioned_frames=self._num_conditioned_frames,
             update_initial_prompts=self._downstream_task == 'e2e'
         )
-        tokenized_arrays = rearrange(tokenized_arrays, '(b n) l c -> b n l c', n=n_repeat)[:, 0:1, :, :]
-        predicted_tokenized_arrays = rearrange(predicted_tokenized_arrays, '(b n) l c -> b n l c', n=n_repeat)
+        tokenized_arrays = rearrange(tokenized_arrays, '(b n) ... -> b n ...', n=n_repeat)[:, 0:1]
+        predicted_tokenized_arrays = rearrange(predicted_tokenized_arrays, '(b n) ... -> b n ...', n=n_repeat)
         if gt_tokenized_arrays is not None:
-            gt_tokenized_arrays = rearrange(gt_tokenized_arrays, '(b n) l c -> b n l c', n=n_repeat)[:, 0:1, :, :]
+            gt_tokenized_arrays = rearrange(gt_tokenized_arrays, '(b n) ... -> b n ...', n=n_repeat)[:, 0:1]
         if self._downstream_task == 'e2e':
             return {
                 'tokenized_arrays': tokenized_arrays,

@@ -8,6 +8,8 @@ validation_token_list_path: '/mnt/nas20/siqi01.chai/wod_splits/validation_token_
 # validation_token_list_path: '/mnt/nas20/siqi01.chai/wod_splits/validation_token_list_small.txt'
 # validation_token_list_path: '/mnt/nas20/zhening.yang/wod/scenario_pkl_v1_2/raw_tokens/validation_token_list_remove_empty.txt'
 # validation_token_list_path: '/mnt/nas20/siqi01.chai/wod_splits/sub50_validation_token_list.txt'
+smart_data_root: '/mnt/nas26/yihan01.hu/wod/waymo_processed'
+# smart_data_root: '/home/users/yihan01.hu/data/waymo_processed'
 db_files: null
 subsample_ratio: 1
 start_index: 0

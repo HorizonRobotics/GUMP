@@ -10,26 +10,20 @@ defaults:
       - convert_to_float
       
   - override /objective:
-    #   - masked_cross_entrophy_objective_v1_1
-      - kinetics_cross_entropy_objective
-  - override /splitter: nuplan
-  - override /model: gump_nuplan_gptbase_v1_1
+      - smart_cross_entrophy_objective
+  - override /splitter: wod
+  - override /model: gump_wod_smart
   - override /scenario_filter: all_scenarios
   - override /training_metric:
       - dummy_metric
   - override /aggregated_metric:
-      - dummy_aggregated_metrics
-    #   - SminADE_aggregated_metrics
-    #   - SminADE_aggregated_metrics_ego
-    #   - SminADE_aggregated_metrics_cdist
-    #   - SminADE_aggregated_metrics_ego_cdist
-    #   - collided_aggregated_metrics
-    #   - collided_aggregated_metrics_ego
+    #   - dummy_aggregated_metrics
+      - sim_agents_smart_metrics
   - override /common_cfg: gump
   - override /callbacks: 
     - learning_rate_monitor_callback
     - model_checkpoint_callback
     - time_logging_callback
-    - visualization_kinetics_gump_callback
-    - log_visual_gated_param_callback
+    # - visualization_smart_callback
+    # - log_visual_gated_param_callback
   
