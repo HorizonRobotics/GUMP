@@ -3,7 +3,7 @@ SAVE_DIR=/mnt/nas25/yihan01.hu/tmp/save_dir/
 EXPERIMENT=wod_test
 CACHE_DIR=/mnt/nas25/yihan01.hu/tmp/cache_wod_dir/
 
-export CUDA_VISIBLE_DEVICES=7
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 export PYTHONPATH=$PWD:$PYTHONPATH
 export PYTHONPATH=$NUPLAN_DEVKIT_PATH:$PYTHONPATH
 

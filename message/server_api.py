@@ -51,6 +51,7 @@ class ServerAPI:
         Sends a dictionary to the connected client.
         This method blocks until the message is sent.
         """
+        print('tring to send...')
         try:
             serialized_data = pickle.dumps(message_dict)
             data_length = struct.pack('>I', len(serialized_data))
@@ -66,6 +67,7 @@ class ServerAPI:
         Receives a dictionary from the connected client.
         This method blocks until the data is received.
         """
+        print('tring to receive...')
         try:
             # First, receive the length of the incoming data (4 bytes)
             raw_length = self.receive_all(4)

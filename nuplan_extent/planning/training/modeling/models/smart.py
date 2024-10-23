@@ -183,7 +183,7 @@ class SMART(TorchModuleWrapper):
             embedder=self.embedder,
             dynamic_decoder=self.dynamic_decoder,
             dynamic_render=self.dynamic_render,
-            n_repeat=2,
+            n_repeat=32,
         )
         transition_dict.update(map_features)
         transition_dict.update(prediction_dict)

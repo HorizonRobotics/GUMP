@@ -4,8 +4,8 @@ SAVE_DIR=/mnt/nas25/yihan01.hu/workspace/test/
 EXPERIMENT=smart_train_bf16_reduce_radius_more_b8
 CACHE_DIR="/home/users/yihan01.hu/data/test" 
 
-export CUDA_VISIBLE_DEVICES=1
-# export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+# export CUDA_VISIBLE_DEVICES=1
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 # export CUDA_LAUNCH_BLOCKING=1
 # export CUDA_VISIBLE_DEVICES=1
 export PYTHONPATH=$PWD:$PYTHONPATH
@@ -32,7 +32,7 @@ python -W ignore $PWD/nuplan_extent/planning/script/run_training.py \
     lightning.trainer.params.accelerator=gpu \
     lightning.trainer.params.max_epochs=4 \
     lightning.trainer.params.max_time=14:32:00:00\
-    lightning.trainer.params.precision=bf16 \
+    lightning.trainer.params.precision=32 \
     lightning.trainer.params.gradient_clip_val=5.0 \
     lightning.trainer.params.strategy=ddp_find_unused_parameters_true \
     +lightning.trainer.params.val_check_interval=0.00000001 \
@@ -49,7 +49,7 @@ python -W ignore $PWD/nuplan_extent/planning/script/run_training.py \
     lr_scheduler.gamma=0.2 \
     lightning.trainer.checkpoint.resume_training=false \
     scenario_filter=all_scenarios \
-    +checkpoint.ckpt_path='/mnt/nas25/yihan01.hu/workspace/test/smart_train_bf16/training_world_model/2024.10.08.23.59.12/best_model/last.ckpt' \
+    +checkpoint.ckpt_path='/mnt/nas25/yihan01.hu/workspace/test/smart_train_32/training_world_model/2024.10.08.17.06.51/best_model/last.ckpt' \
     +checkpoint.strict=False \
     +checkpoint.resume=False 
 
