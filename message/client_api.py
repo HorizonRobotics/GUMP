@@ -2,7 +2,6 @@ import socket
 import pickle
 import struct
 import numpy as np
-import threading
 import logging
 
 # Configure logging
@@ -14,52 +13,42 @@ class ClientAPI:
     and processes the received data.
     """
 
-    def __init__(self, host='127.0.0.1', port=8888, on_receive=None):
+    def __init__(self, host='127.0.0.1', port=8888):
         """
         Initializes the client with the server's host and port.
         """
         self.host = host
         self.port = port
         self.socket = None
-        self.is_connected = False
-        self.on_receive = on_receive  # Callback function to handle received data
-        self.send_lock = threading.Lock()
-        self.receive_lock = threading.Lock()
 
     def connect(self):
         """
-        Connects to the server and starts the receiving thread.
+        Connects to the server.
         """
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.socket.connect((self.host, self.port))
-            self.is_connected = True
             logging.info(f'Connected to server at {self.host}:{self.port}')
-
-            # Start a new thread to listen for incoming data
-            receive_thread = threading.Thread(target=self.receive_data, daemon=True)
-            receive_thread.start()
-        except ConnectionRefusedError:
-            logging.error(f"Connection refused by the server at {self.host}:{self.port}")
-            self.is_connected = False
         except Exception as e:
             logging.error(f'An error occurred while connecting: {e}')
-            self.is_connected = False
+            self.socket = None
 
     def disconnect(self):
         """
         Disconnects from the server and closes the socket.
         """
-        self.is_connected = False
         if self.socket:
             self.socket.close()
             logging.info('Disconnected from server.')
+            self.socket = None
 
-    def send_data(self, message_dict):
+    def send(self, message_dict):
         """
         Sends a dictionary containing NumPy arrays to the server.
+        This method blocks until the data is sent.
         """
-        if not self.is_connected:
+        print('trying to send...')
+        if not self.socket:
             logging.warning('Cannot send data. Not connected to the server.')
             return
 
@@ -68,12 +57,47 @@ class ClientAPI:
             data_length = struct.pack('>I', len(serialized_data))
             message = data_length + serialized_data
 
-            with self.send_lock:
-                self.socket.sendall(message)
-                logging.info(f"Sent data to server: {message_dict}")
+            self.socket.sendall(message)
+            logging.info(f"Sent data to server: {message_dict}")
         except Exception as e:
             logging.error(f"Failed to send data: {e}")
             self.disconnect()
+
+    def receive(self):
+        """
+        Receives a dictionary from the server.
+        This method blocks until the data is received.
+        """
+        print('trying to receive...')
+        if not self.socket:
+            logging.warning('Cannot receive data. Not connected to the server.')
+            return None
+
+        try:
+            # First, receive the length of the incoming data (4 bytes)
+            raw_length = self.receive_all(4)
+            if not raw_length:
+                logging.info('No data received. Closing connection.')
+                self.disconnect()
+                return None
+            data_length = struct.unpack('>I', raw_length)[0]
+            logging.info(f"Expecting to receive {data_length} bytes of data from server")
+
+            # Now receive the actual data
+            serialized_data = self.receive_all(data_length)
+            if not serialized_data:
+                logging.info('No serialized data received. Closing connection.')
+                self.disconnect()
+                return None
+
+            # Deserialize the data back into a Python object
+            data_dict = pickle.loads(serialized_data)
+            logging.info(f"Received data from server: {data_dict.keys()}")
+            return data_dict
+        except Exception as e:
+            logging.error(f'An error occurred while receiving data: {e}')
+            self.disconnect()
+            return None
 
     def receive_all(self, length):
         """
@@ -87,85 +111,39 @@ class ClientAPI:
             data += more
         return data
 
-    def receive_data(self):
+    def generate_data(self):
         """
-        Continuously listens for incoming data from the server, deserializes it,
-        and invokes the callback function if provided.
+        Generates a sample dictionary containing NumPy arrays.
+        Modify this method to send your actual data.
         """
-        try:
-            while self.is_connected:
-                # First, receive the length of the incoming data (4 bytes)
-                raw_length = self.receive_all(4)
-                if not raw_length:
-                    logging.info('No data received. Closing connection.')
-                    break
-                data_length = struct.unpack('>I', raw_length)[0]
-                logging.info(f"Expecting to receive {data_length} bytes of data from server")
-
-                # Now receive the actual data
-                serialized_data = self.receive_all(data_length)
-                if not serialized_data:
-                    logging.info('No serialized data received. Closing connection.')
-                    break
-
-                # Deserialize the data back into a Python object
-                data_dict = pickle.loads(serialized_data)
-                logging.info(f"Received data from server: {data_dict}")
-
-                # Invoke the callback function if provided
-                if self.on_receive:
-                    self.on_receive(data_dict)
-                else:
-                    # Default behavior: print the received data
-                    self.process_data(data_dict)
-        except EOFError:
-            logging.info('Server closed the connection.')
-        except ConnectionResetError:
-            logging.error('Connection was reset by the server.')
-        except Exception as e:
-            logging.error(f'An error occurred while receiving data: {e}')
-        finally:
-            self.disconnect()
-
-    def process_data(self, data_dict):
-        """
-        Processes the received data. Override this method or provide a callback to customize behavior.
-        """
-        logging.info('Received data:')
-        for key, array in data_dict.items():
-            logging.info(f"{key}: {array}")
+        data_dict = {
+            'client_array1': np.random.rand(3),
+            'client_array2': np.random.randint(0, 50, size=(2, 2))
+        }
+        return data_dict
 
 def main():
-    """
-    Example usage of the ClientAPI.
-    """
-
-    def handle_received_data(data):
-        """
-        Custom callback function to handle received data.
-        """
-        logging.info('Custom Handler - Received data:')
-        for key, array in data.items():
-            logging.info(f"{key}: {array}")
-
-    # Initialize the client with a custom callback
-    client = ClientAPI(host='10.40.11.68', port=8888, on_receive=handle_received_data)
+    client = ClientAPI(host='10.40.11.68', port=8888)
     client.connect()
 
     try:
-        # Example: Sending data from client to server every 5 seconds
-        while client.is_connected:
-            # Create a sample dictionary to send
-            data_to_send = {
-                'client_array1': np.random.rand(3),
-                'client_array2': np.random.randint(0, 50, size=(2, 2))
-            }
-            client.send_data(data_to_send)
+        while True:
+            # Receive data from server
+            data = client.receive()
 
-            # Wait before sending the next message
-            threading.Event().wait(5)  # Wait for 5 seconds
+            if data is None:
+                break
+
+            # Send data to server
+            data_to_send = client.generate_data()
+            client.send(data_to_send)
+
+            # Process the received data as needed
+            # For example, print it
+            logging.info(f"Processing data from server: {data}")
+
     except KeyboardInterrupt:
-        logging.info('Interrupted by user.')
+        logging.info('Client shutting down.')
     finally:
         client.disconnect()
 

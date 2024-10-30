@@ -114,7 +114,7 @@ class SMARTTransitionModel(pl.LightningModule):
         self.beam_size = 5
         self.hist_mask = True
 
-        self.is_interactive = False
+        self.is_interactive = True
         if self.is_interactive:
             self.server = ServerAPI(port=8888)
             self.server.start_server()
@@ -504,7 +504,6 @@ class SMARTTransitionModel(pl.LightningModule):
                     selected_index = command['select_act_index']
                     ego_xyh = torch.tensor(command['xyh']).to(pos_a.device).to(pos_a.dtype)
                     next_token_prob[cat_av_mask, selected_index] = 10000
-                    # import pdb; pdb.set_trace()
                 next_token_prob_softmax = torch.softmax(next_token_prob, dim=-1) # N_agent, token_size
 
                 topk_prob, next_token_idx = torch.topk(next_token_prob_softmax, k=self.beam_size, dim=-1)

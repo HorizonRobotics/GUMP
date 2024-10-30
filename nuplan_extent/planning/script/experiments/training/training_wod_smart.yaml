@@ -17,8 +17,8 @@ defaults:
   - override /training_metric:
       - dummy_metric
   - override /aggregated_metric:
-    #   - dummy_aggregated_metrics
-      - sim_agents_smart_metrics
+      - dummy_aggregated_metrics
+    #   - sim_agents_smart_metrics
   - override /common_cfg: gump
   - override /callbacks: 
     - learning_rate_monitor_callback

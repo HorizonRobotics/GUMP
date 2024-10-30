@@ -2,9 +2,9 @@ visualization_smart_callback:
   _target_: nuplan_extent.planning.training.callbacks.visualization_smart_callback.VisualizationSMARTCallback
   _convert_: 'all'
   
-  images_per_tile: 2  # number of images per row
-  num_train_tiles: 2  # number of rows of training images
-  num_val_tiles: 2  # number of rows of validation images
+  images_per_tile: 1  # number of images per row
+  num_train_tiles: 1  # number of rows of training images
+  num_val_tiles: 1  # number of rows of validation images
   pixel_size: 0.5  # [m] pixel size of image
   canvas_size: 416
   raster_type:
